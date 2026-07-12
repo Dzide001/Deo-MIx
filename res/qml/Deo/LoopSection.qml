@@ -14,6 +14,13 @@ import "../Theme"
 // regular beatloop; holding it activates a rolling loop instead
 // (beatlooproll_*_activate is a momentary press/release control at the
 // engine level, so hold = on, release = off, same pattern as CUE in M1).
+//
+// Single row (label/stepper/in-out-recall), matching deckA_loop_row in
+// Deo Pro dj_layout_spec.json: label 5%, stepper 35%, in_out 55% are
+// siblings in one horizontal row there, not stacked as two rows the way
+// this was originally built. The spec's separate 5% settings_icon (gear)
+// isn't wired to anything defined, so that space is folded into the
+// In/Out/Recall group instead of left as a dead control.
 RowLayout {
     id: root
 
@@ -82,7 +89,8 @@ RowLayout {
     // Rotated label on the left edge, matching the reference layout.
     Item {
         Layout.fillHeight: true
-        Layout.preferredWidth: 16
+        Layout.preferredWidth: root.width * 0.05
+        Layout.minimumWidth: 14
 
         Label {
             anchors.centerIn: parent
@@ -94,122 +102,123 @@ RowLayout {
             text: "LOOP"
         }
     }
-    ColumnLayout {
-        Layout.fillWidth: true
-        spacing: 4
+    // Stepper: </readout/> — 35% of the row.
+    RowLayout {
+        Layout.preferredWidth: root.width * 0.35
+        Layout.minimumWidth: 90
+        enabled: root.trackLoaded
+        opacity: enabled ? 1.0 : 0.4
+        spacing: 2
 
-        RowLayout {
-            Layout.fillWidth: true
-            enabled: root.trackLoaded
-            opacity: enabled ? 1.0 : 0.4
-            spacing: 4
+        Skin.Button {
+            Layout.preferredWidth: 20
+            activeColor: root.accentColor
+            implicitHeight: 22
+            text: "<"
 
-            Skin.Button {
-                Layout.preferredWidth: 22
-                activeColor: root.accentColor
-                implicitHeight: 22
-                text: "<"
-
-                onClicked: {
-                    if (root.loopActive) {
-                        loopHalve.trigger();
-                    } else {
-                        root.selectedIndex = Math.max(0, root.selectedIndex - 1);
-                    }
-                }
-            }
-            Skin.Button {
-                id: activateButton
-
-                property bool rolling: false
-
-                Layout.fillWidth: true
-                activeColor: root.accentColor
-                highlight: root.loopActive
-                implicitHeight: 22
-                text: root.formatBeatSize(root.beatSizes[root.selectedIndex])
-
-                onClicked: {
-                    if (!root.loopActive && !rolling) {
-                        activateControl.trigger();
-                    }
-                }
-                onPressAndHold: {
-                    if (!root.loopActive) {
-                        rolling = true;
-                        rollControl.value = 1;
-                    }
-                }
-                onReleased: {
-                    if (rolling) {
-                        rollControl.value = 0;
-                        rolling = false;
-                    }
-                }
-
-                Mixxx.ControlProxy {
-                    id: activateControl
-
-                    group: root.group
-                    key: `beatloop_${root.beatSizes[root.selectedIndex]}_activate`
-                }
-                Mixxx.ControlProxy {
-                    id: rollControl
-
-                    group: root.group
-                    key: `beatlooproll_${root.beatSizes[root.selectedIndex]}_activate`
-                }
-            }
-            Skin.Button {
-                Layout.preferredWidth: 22
-                activeColor: root.accentColor
-                implicitHeight: 22
-                text: ">"
-
-                onClicked: {
-                    if (root.loopActive) {
-                        loopDouble.trigger();
-                    } else {
-                        root.selectedIndex = Math.min(root.beatSizes.length - 1, root.selectedIndex + 1);
-                    }
+            onClicked: {
+                if (root.loopActive) {
+                    loopHalve.trigger();
+                } else {
+                    root.selectedIndex = Math.max(0, root.selectedIndex - 1);
                 }
             }
         }
-        RowLayout {
-            Layout.fillWidth: true
-            spacing: 4
+        Skin.Button {
+            id: activateButton
 
-            Skin.ControlButton {
-                Layout.fillWidth: true
-                activeColor: root.accentColor
-                enabled: root.trackLoaded
-                group: root.group
-                implicitHeight: 24
-                key: "loop_in"
-                opacity: enabled ? 1.0 : 0.4
-                text: "In"
+            property bool rolling: false
+
+            Layout.fillWidth: true
+            activeColor: root.accentColor
+            highlight: root.loopActive
+            implicitHeight: 22
+            text: root.formatBeatSize(root.beatSizes[root.selectedIndex])
+
+            onClicked: {
+                if (!root.loopActive && !rolling) {
+                    activateControl.trigger();
+                }
             }
-            Skin.ControlButton {
-                Layout.fillWidth: true
-                activeColor: root.accentColor
-                enabled: root.trackLoaded
-                group: root.group
-                implicitHeight: 24
-                key: "loop_out"
-                opacity: enabled ? 1.0 : 0.4
-                text: "Out"
+            onPressAndHold: {
+                if (!root.loopActive) {
+                    rolling = true;
+                    rollControl.value = 1;
+                }
             }
-            Skin.ControlButton {
-                Layout.fillWidth: true
-                activeColor: root.accentColor
-                enabled: root.trackLoaded
-                group: root.group
-                implicitHeight: 24
-                key: root.loopActive ? "loop_enabled" : "reloop_toggle"
-                opacity: enabled ? 1.0 : 0.4
-                text: root.loopActive ? "Exit" : "Recall"
-                toggleable: root.loopActive
+            onReleased: {
+                if (rolling) {
+                    rollControl.value = 0;
+                    rolling = false;
+                }
             }
+
+            Mixxx.ControlProxy {
+                id: activateControl
+
+                group: root.group
+                key: `beatloop_${root.beatSizes[root.selectedIndex]}_activate`
+            }
+            Mixxx.ControlProxy {
+                id: rollControl
+
+                group: root.group
+                key: `beatlooproll_${root.beatSizes[root.selectedIndex]}_activate`
+            }
+        }
+        Skin.Button {
+            Layout.preferredWidth: 20
+            activeColor: root.accentColor
+            implicitHeight: 22
+            text: ">"
+
+            onClicked: {
+                if (root.loopActive) {
+                    loopDouble.trigger();
+                } else {
+                    root.selectedIndex = Math.min(root.beatSizes.length - 1, root.selectedIndex + 1);
+                }
+            }
+        }
+    }
+    // In/Out/Recall — absorbs the spec's in_out (55%) plus its unwired
+    // settings_icon (5%), since there's no defined "loop settings" to put
+    // there.
+    RowLayout {
+        Layout.fillWidth: true
+        Layout.minimumWidth: 120
+        spacing: 4
+
+        Skin.ControlButton {
+            Layout.fillWidth: true
+            activeColor: root.accentColor
+            enabled: root.trackLoaded
+            group: root.group
+            implicitHeight: 24
+            key: "loop_in"
+            opacity: enabled ? 1.0 : 0.4
+            text: "In"
+        }
+        Skin.ControlButton {
+            Layout.fillWidth: true
+            activeColor: root.accentColor
+            enabled: root.trackLoaded
+            group: root.group
+            implicitHeight: 24
+            key: "loop_out"
+            opacity: enabled ? 1.0 : 0.4
+            text: "Out"
+        }
+        Skin.ControlButton {
+            Layout.fillWidth: true
+            activeColor: root.accentColor
+            enabled: root.trackLoaded
+            group: root.group
+            implicitHeight: 24
+            key: root.loopActive ? "loop_enabled" : "reloop_toggle"
+            opacity: enabled ? 1.0 : 0.4
+            text: root.loopActive ? "Exit" : "Recall"
+            toggleable: root.loopActive
         }
     }
 }

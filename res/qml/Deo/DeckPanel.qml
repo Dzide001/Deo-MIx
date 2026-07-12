@@ -93,9 +93,16 @@ Item {
             LayoutMirroring.childrenInherit: true
             spacing: 10
 
-            // Left column: FX rack + loop section.
+            // Left column: FX rack + loop section. 46/54 split matches
+            // deckA_fx_cluster (46%) vs deckA_jog_row (54%) in
+            // Deo Pro dj_layout_spec.json — both the top_controls and
+            // bottom_row halves use the same split, which is why one
+            // full-height two-column body (FX+Loop stacked left,
+            // jog+pitch+Transport stacked right) is equivalent to the
+            // spec's two separate same-split rows.
             ColumnLayout {
-                Layout.preferredWidth: 155
+                Layout.preferredWidth: body.width * 0.46
+                Layout.minimumWidth: 150
                 Layout.fillHeight: true
                 spacing: 8
 
@@ -181,8 +188,13 @@ Item {
                         }
                     }
                     Deo.PitchFader {
+                        // 68/32 jogwheel/pitch-fader split per
+                        // deckA_jogwheel_area vs deckA_pitch_fader_area in
+                        // Deo Pro dj_layout_spec.json: jog wheel is 160px,
+                        // so pitch fader column should be ~75px (was 34,
+                        // noticeably narrower than the spec's ratio).
                         Layout.fillHeight: true
-                        Layout.preferredWidth: 34
+                        Layout.preferredWidth: 75
                         accentColor: root.accentColor
                         group: root.group
                     }
