@@ -1,41 +1,38 @@
 import QtQuick 2.12
-import QtQuick.Layouts
 import ".." as Skin
 
-// M6: main scrolling waveform + whole-track overview strip. Both reuse
-// Mixxx's own native, GPU-accelerated waveform renderer components
-// (MixxxControls.WaveformDisplay/WaveformOverview, the exact custom
-// QQuickItem approach the spec anticipated needing to build from
-// scratch) via the stock res/qml/WaveformDisplay.qml and
-// WaveformOverview.qml compositions — no new rendering code needed.
-// Beat markers, cue/loop/intro/outro marks, played/unplayed shading,
-// zoom (mouse wheel), scratch/bend mouse handling, and the 30-second
-// end-of-track warning all come from those components already; hotcue
-// markers were the one gap and are added directly to
-// res/qml/WaveformDisplay.qml (8 hotcues, matching the count used
-// elsewhere in this skin).
-ColumnLayout {
+// M6: one deck's scrolling waveform lane. Meant to be stacked full-width
+// (Deck A's lane on top, Deck B's on the bottom, both spanning the full
+// window width) rather than placed side by side — per the reference
+// screenshot, the scrolling waveform is one shared full-width area split
+// into top/bottom halves by deck, not two half-width columns.
+//
+// Reuses Mixxx's own native, GPU-accelerated waveform renderer
+// (MixxxControls.WaveformDisplay, the exact custom QQuickItem approach
+// the M6 spec anticipated needing to build from scratch) via the stock
+// res/qml/WaveformDisplay.qml composition — no new rendering code
+// needed. Beat markers, cue/loop/intro/outro/hotcue marks, played/
+// unplayed shading, zoom (mouse wheel), scratch/bend mouse handling, and
+// the 30-second end-of-track warning all come from that component.
+Item {
     id: root
 
     required property string group
     required property color accentColor
 
-    spacing: 2
-
+    // Thin accent-colored edge to tell the two lanes apart at a glance,
+    // matching the small colored indicator on the reference screenshot's
+    // left edge.
     Rectangle {
-        Layout.fillWidth: true
-        height: 2
+        anchors.left: parent.left
+        anchors.top: parent.top
+        anchors.bottom: parent.bottom
+        width: 3
         color: root.accentColor
     }
     Skin.WaveformDisplay {
-        Layout.fillWidth: true
-        Layout.fillHeight: true
-        Layout.minimumHeight: 60
-        group: root.group
-    }
-    Skin.WaveformOverview {
-        Layout.fillWidth: true
-        Layout.preferredHeight: 20
+        anchors.fill: parent
+        anchors.leftMargin: 5
         group: root.group
     }
 }

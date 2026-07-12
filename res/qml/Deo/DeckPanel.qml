@@ -83,6 +83,16 @@ Item {
                 text: root.trackLoaded ? "" : "No track loaded — drop a file here"
             }
         }
+        // Whole-track overview strip, matching deckA_mini_waveform in
+        // Deo Pro dj_layout_spec.json — a small "static" preview that
+        // lives inside the deck itself, between the track-info header and
+        // the FX/jog body, distinct from the shared full-width scrolling
+        // waveform in main.qml.
+        Deo.DeckOverviewWaveform {
+            Layout.fillWidth: true
+            Layout.preferredHeight: 18
+            group: root.group
+        }
         RowLayout {
             id: body
 

@@ -51,20 +51,19 @@ ApplicationWindow {
         anchors.margins: 12
         spacing: 12
 
-        // M6: waveform strip spans the full window width above the deck
-        // section, matching Deo Pro dj_layout_spec.json's
+        // M6: scrolling waveform spans the full window width above the
+        // deck section, matching Deo Pro dj_layout_spec.json's
         // waveform_overview_section (a window-level row, 14% of window
         // height, sibling of deck_section — not nested inside each deck's
-        // own column, which is where this lived before). Two lanes side
-        // by side, one per deck, matching the M6 spec's own wording
-        // ("the horizontal lanes," plural) rather than the JSON's
-        // singular "master_waveform" type name, which just labels the
-        // display type, not a literal shared/combined waveform.
-        RowLayout {
+        // own column). Per the VirtualDJ-style reference screenshot, the
+        // two decks' scrolling lanes are STACKED (Deck A on top, Deck B
+        // below), each spanning the full window width, rather than placed
+        // side by side in half-width columns.
+        ColumnLayout {
             Layout.fillWidth: true
             Layout.preferredHeight: Math.max(110, root.height * 0.14)
             Layout.minimumHeight: 110
-            spacing: 8
+            spacing: 2
 
             Deo.DeckWaveform {
                 Layout.fillWidth: true
