@@ -33,13 +33,12 @@ class AudioUnitBackend : public EffectsBackend {
     };
 
     const QList<QString> getEffectIds() const override {
-        QList<QString> effectIds;
-
-        for (NSString* effectId in m_componentsById) {
-            effectIds.append(QString::fromNSString(effectId));
-        }
-
-        return effectIds;
+        // Only report IDs whose manifest has actually finished loading.
+        // loadAudioUnits() registers every discovered component in
+        // m_componentsById synchronously but loads manifests asynchronously
+        // with a timeout, so m_componentsById can contain IDs with no
+        // corresponding entry in m_manifestsById yet.
+        return m_manifestsById.keys();
     }
 
     EffectManifestPointer getManifest(const QString& effectId) const override {
