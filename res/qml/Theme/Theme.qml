@@ -17,7 +17,9 @@ QtObject {
     property color darkGray2: "#242424"
     property color darkGray3: "#3F3F3F"
     property color darkGray4: "#202020"
+    property color deckAAccent: "#1BC5B8"
     property color deckActiveColor: green
+    property color deckBAccent: "#FF5C5C"
     property color deckBackgroundColor: darkGray
     property color deckBeatjumpBackgroundColor: midGray3
     property color deckBeatjumpLabelColor: darkGray3
