@@ -46,29 +46,64 @@ ApplicationWindow {
         }
     }
 
-    RowLayout {
-        anchors.centerIn: parent
-        spacing: 24
+    ColumnLayout {
+        anchors.fill: parent
+        anchors.margins: 12
+        spacing: 12
 
-        Deo.DeckPanel {
-            accentColor: Theme.deckAAccent
-            effectUnitNumber: 1
-            group: "[Channel1]"
-            label: "DECK A"
+        // M6: waveform strip spans the full window width above the deck
+        // section, matching Deo Pro dj_layout_spec.json's
+        // waveform_overview_section (a window-level row, 14% of window
+        // height, sibling of deck_section — not nested inside each deck's
+        // own column, which is where this lived before). Two lanes side
+        // by side, one per deck, matching the M6 spec's own wording
+        // ("the horizontal lanes," plural) rather than the JSON's
+        // singular "master_waveform" type name, which just labels the
+        // display type, not a literal shared/combined waveform.
+        RowLayout {
+            Layout.fillWidth: true
+            Layout.preferredHeight: Math.max(110, root.height * 0.14)
+            Layout.minimumHeight: 110
+            spacing: 8
+
+            Deo.DeckWaveform {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                accentColor: Theme.deckAAccent
+                group: "[Channel1]"
+            }
+            Deo.DeckWaveform {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                accentColor: Theme.deckBAccent
+                group: "[Channel2]"
+            }
         }
-        Deo.MixerTabs {
-            Layout.preferredWidth: 400
-            Layout.minimumWidth: 380
-            Layout.preferredHeight: 420
-            accentColorA: Theme.deckAAccent
-            accentColorB: Theme.deckBAccent
-        }
-        Deo.DeckPanel {
-            accentColor: Theme.deckBAccent
-            effectUnitNumber: 2
-            group: "[Channel2]"
-            label: "DECK B"
-            mirrored: true
+        RowLayout {
+            Layout.alignment: Qt.AlignHCenter
+            Layout.fillHeight: true
+            spacing: 24
+
+            Deo.DeckPanel {
+                accentColor: Theme.deckAAccent
+                effectUnitNumber: 1
+                group: "[Channel1]"
+                label: "DECK A"
+            }
+            Deo.MixerTabs {
+                Layout.preferredWidth: 400
+                Layout.minimumWidth: 380
+                Layout.preferredHeight: 420
+                accentColorA: Theme.deckAAccent
+                accentColorB: Theme.deckBAccent
+            }
+            Deo.DeckPanel {
+                accentColor: Theme.deckBAccent
+                effectUnitNumber: 2
+                group: "[Channel2]"
+                label: "DECK B"
+                mirrored: true
+            }
         }
     }
 }

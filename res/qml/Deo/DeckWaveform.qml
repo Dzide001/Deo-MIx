@@ -29,7 +29,8 @@ ColumnLayout {
     }
     Skin.WaveformDisplay {
         Layout.fillWidth: true
-        Layout.preferredHeight: 64
+        Layout.fillHeight: true
+        Layout.minimumHeight: 60
         group: root.group
     }
     Skin.WaveformOverview {
