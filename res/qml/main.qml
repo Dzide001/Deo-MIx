@@ -16,10 +16,10 @@ ApplicationWindow {
     color: Theme.backgroundColor
     height: 760
     minimumHeight: 620
-    minimumWidth: 1180
+    minimumWidth: 1300
     visible: true
     visibility: Mixxx.Config.configStartInFullscreenKey ? Window.FullScreen : Window.Windowed
-    width: 1500
+    width: 1600
 
     Mixxx.ControlProxy {
         group: "[App]"
@@ -57,7 +57,8 @@ ApplicationWindow {
             label: "DECK A"
         }
         Deo.MixerTabs {
-            Layout.preferredWidth: 320
+            Layout.preferredWidth: 400
+            Layout.minimumWidth: 380
             Layout.preferredHeight: 420
             accentColorA: Theme.deckAAccent
             accentColorB: Theme.deckBAccent
