@@ -6,10 +6,12 @@ import "." as Deo
 import ".." as Skin
 import "../Theme"
 
-// GAIN knob, VU meter, channel fader, PFL toggle — the center column of a
-// deck's mixer strip. accentColor drives the PFL "engaged" color per
-// M5's acceptance criteria; the VU meter itself intentionally does not
-// use it (clip/peak coloring is universal, not per-deck branding).
+// GAIN knob, channel fader, headphone-cue toggle — one deck's mixer
+// strip. VU meters live in a separate shared cluster between the two
+// strips (see AudioMixerPanel.qml / MixerVuMeters.qml), matching the
+// spec's mixer_vu_meter group rather than flanking each fader
+// individually. accentColor drives the PFL "engaged" color per M5's
+// acceptance criteria.
 ColumnLayout {
     id: root
 
@@ -18,13 +20,6 @@ ColumnLayout {
 
     spacing: 6
 
-    Label {
-        Layout.alignment: Qt.AlignHCenter
-        color: Theme.deckTextSecondary
-        font.family: Theme.fontFamily
-        font.pixelSize: 10
-        text: "GAIN"
-    }
     Skin.ControlKnob {
         Layout.alignment: Qt.AlignHCenter
         color: Theme.gainKnobColor
@@ -33,28 +28,19 @@ ColumnLayout {
         key: "pregain"
         width: 36
     }
-    RowLayout {
-        Layout.fillHeight: true
+    Label {
         Layout.alignment: Qt.AlignHCenter
-        spacing: 4
-
-        Skin.VuMeter {
-            Layout.fillHeight: true
-            group: root.group
-            key: "vu_meter_left"
-            width: 4
-        }
-        Deo.ChannelFader {
-            Layout.fillHeight: true
-            Layout.preferredWidth: 34
-            group: root.group
-        }
-        Skin.VuMeter {
-            Layout.fillHeight: true
-            group: root.group
-            key: "vu_meter_right"
-            width: 4
-        }
+        color: Theme.deckTextSecondary
+        font.family: Theme.fontFamily
+        font.pixelSize: 10
+        text: "GAIN"
+    }
+    Deo.ChannelFader {
+        Layout.fillHeight: true
+        Layout.fillWidth: true
+        Layout.preferredWidth: 34
+        Layout.alignment: Qt.AlignHCenter
+        group: root.group
     }
     Skin.ControlButton {
         Layout.alignment: Qt.AlignHCenter

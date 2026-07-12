@@ -131,26 +131,26 @@ Item {
                         // reference, plus an eject icon overlaid on the
                         // wheel's top-left corner.
                         RowLayout {
-                            Layout.fillWidth: true
-                            spacing: 4
+                            Layout.alignment: Qt.AlignHCenter
+                            spacing: 3
 
                             Skin.Button {
                                 id: vinylToggle
 
-                                Layout.fillWidth: true
                                 activeColor: root.accentColor
                                 checkable: true
                                 checked: true
-                                implicitHeight: 18
-                                text: "VINYL"
+                                implicitHeight: 16
+                                implicitWidth: 22
+                                text: "V"
                             }
                             Skin.ControlButton {
-                                Layout.fillWidth: true
                                 activeColor: root.accentColor
                                 group: root.group
-                                implicitHeight: 18
+                                implicitHeight: 16
+                                implicitWidth: 22
                                 key: "slip_enabled"
-                                text: "SLIP"
+                                text: "S"
                                 toggleable: true
                             }
                         }

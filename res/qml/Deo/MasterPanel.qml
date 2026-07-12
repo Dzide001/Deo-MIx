@@ -53,13 +53,16 @@ ColumnLayout {
     }
 
     RowLayout {
+        id: contentRow
+
         Layout.fillWidth: true
         Layout.fillHeight: true
         spacing: 10
 
         // Master column.
         ColumnLayout {
-            Layout.preferredWidth: 90
+            Layout.preferredWidth: contentRow.width * 0.20
+            Layout.minimumWidth: 90
             Layout.fillHeight: true
             spacing: 6
 
@@ -117,7 +120,8 @@ ColumnLayout {
         }
         // Headphone + Master Effect + Record/Broadcast column.
         ColumnLayout {
-            Layout.fillWidth: true
+            Layout.preferredWidth: contentRow.width * 0.60
+            Layout.minimumWidth: 200
             Layout.fillHeight: true
             spacing: 10
 
@@ -266,7 +270,8 @@ ColumnLayout {
         }
         // Mic column.
         ColumnLayout {
-            Layout.preferredWidth: 90
+            Layout.preferredWidth: contentRow.width * 0.20
+            Layout.minimumWidth: 90
             Layout.fillHeight: true
             spacing: 6
 

@@ -3,44 +3,53 @@ import QtQuick.Layouts
 import "." as Deo
 import ".." as Skin
 
-// M5 AUDIO tab: EQ columns (reusing stock Skin.EqColumn as-is — it's
-// pure-knob/combobox, no Skin.Fader involved, so it isn't affected by
-// the bar.margin issue) flanking each deck's channel strip, crossfader
-// below.
-ColumnLayout {
+// M5 AUDIO tab. Proportions match "DEo audio_mixer_panel_spec.json":
+// eq_column_left 26% / mixer_center_panel 49% / eq_column_right 25% of
+// this row's width. EQ columns reuse stock Skin.EqColumn as-is (pure
+// knob/combobox, no Skin.Fader involved, so unaffected by the
+// bar.margin issue). Crossfader lives in MixerTabs.qml now (persistent
+// across tabs, not AUDIO-only).
+RowLayout {
     id: root
 
     required property color accentColorA
     required property color accentColorB
 
-    spacing: 8
+    spacing: 0
 
-    RowLayout {
-        Layout.fillWidth: true
+    Skin.EqColumn {
+        Layout.preferredWidth: root.width * 0.26
+        Layout.minimumWidth: 90
         Layout.fillHeight: true
-        spacing: 8
+        group: "[Channel1]"
+    }
+    RowLayout {
+        Layout.preferredWidth: root.width * 0.49
+        Layout.minimumWidth: 180
+        Layout.fillHeight: true
+        spacing: 4
 
-        Skin.EqColumn {
-            Layout.preferredWidth: 42
-            group: "[Channel1]"
-        }
         Deo.ChannelStrip {
+            Layout.fillWidth: true
             Layout.fillHeight: true
             accentColor: root.accentColorA
             group: "[Channel1]"
         }
+        Deo.MixerVuMeters {
+            Layout.fillHeight: true
+            Layout.preferredWidth: 24
+        }
         Deo.ChannelStrip {
+            Layout.fillWidth: true
             Layout.fillHeight: true
             accentColor: root.accentColorB
             group: "[Channel2]"
         }
-        Skin.EqColumn {
-            Layout.preferredWidth: 42
-            group: "[Channel2]"
-        }
     }
-    Deo.Crossfader {
-        Layout.fillWidth: true
-        Layout.preferredHeight: 26
+    Skin.EqColumn {
+        Layout.preferredWidth: root.width * 0.25
+        Layout.minimumWidth: 90
+        Layout.fillHeight: true
+        group: "[Channel2]"
     }
 }

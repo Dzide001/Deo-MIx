@@ -3,12 +3,19 @@ import QtQuick.Layouts
 import "." as Deo
 import ".." as Skin
 
-// M5: AUDIO/VIDEO/SCRATCH/MASTER tab shell. Only AUDIO and MASTER have
-// real content; VIDEO is disabled (blocked on M12 — no video engine
-// exists) and SCRATCH is out of scope entirely per discussion. StackLayout
-// keeps every tab's contents alive rather than recreating them via a
-// Loader, so switching away and back doesn't lose control state
-// (acceptance criterion #6).
+// M5: AUDIO/VIDEO/MASTER tab shell (SCRATCH removed entirely — not a
+// defined feature, deprioritized per discussion). Only AUDIO and MASTER
+// have real content; VIDEO is disabled (blocked on M12 — no video engine
+// exists). StackLayout keeps every tab's contents alive rather than
+// recreating them via a Loader, so switching away and back doesn't lose
+// control state (acceptance criterion #6).
+//
+// The crossfader is persistent across tabs rather than living inside
+// AudioMixerPanel: both deo_master_panel_spec.json and
+// "DEo audio_mixer_panel_spec.json" show a fader in the identical
+// position/style at the bottom of the mixer regardless of which tab is
+// selected, matching how a physical mixer's crossfader doesn't change
+// based on what's shown on a screen above it.
 ColumnLayout {
     id: root
 
@@ -41,17 +48,9 @@ ColumnLayout {
             Layout.fillWidth: true
             checkable: true
             checked: tabStack.currentIndex === 2
-            enabled: false
-            opacity: 0.4
-            text: "SCRATCH"
-        }
-        Skin.Button {
-            Layout.fillWidth: true
-            checkable: true
-            checked: tabStack.currentIndex === 3
             text: "MASTER"
 
-            onClicked: tabStack.currentIndex = 3
+            onClicked: tabStack.currentIndex = 2
         }
     }
     StackLayout {
@@ -68,10 +67,11 @@ ColumnLayout {
         Item {
             // VIDEO: blocked on M12, no video engine exists.
         }
-        Item {
-            // SCRATCH: out of scope, not a defined feature.
-        }
         Deo.MasterPanel {
         }
+    }
+    Deo.Crossfader {
+        Layout.fillWidth: true
+        Layout.preferredHeight: 26
     }
 }
