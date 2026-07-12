@@ -83,6 +83,11 @@ Item {
                 text: root.trackLoaded ? "" : "No track loaded — drop a file here"
             }
         }
+        Deo.DeckWaveform {
+            Layout.fillWidth: true
+            accentColor: root.accentColor
+            group: root.group
+        }
         RowLayout {
             id: body
 

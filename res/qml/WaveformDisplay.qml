@@ -148,6 +148,33 @@ Item {
                 text: '◣'
                 textColor: '#FFFFFF'
             }
+            // M6: numbered hotcue markers, using the same hotcue_N_color/
+            // _position CO pattern as Hotcue.qml and
+            // WaveformOverviewHotcueMarker.qml. 8 matches the hotcue count
+            // used elsewhere in this skin (Deck/HotcueAndStem.qml).
+            Repeater {
+                model: 8
+
+                Mixxx.WaveformMark {
+                    id: hotcueMark
+
+                    required property int index
+                    readonly property int hotcueNumber: index + 1
+
+                    align: 'bottom|left'
+                    color: hotcueColorControl.value >= 0 ? "#" + hotcueColorControl.value.toString(16).padStart(6, "0") : '#00d9ff'
+                    control: "hotcue_" + hotcueNumber + "_position"
+                    text: "" + hotcueNumber
+                    textColor: '#1a1a1a'
+
+                    Mixxx.ControlProxy {
+                        id: hotcueColorControl
+
+                        group: root.group
+                        key: "hotcue_" + hotcueMark.hotcueNumber + "_color"
+                    }
+                }
+            }
         }
     }
     Mixxx.ControlProxy {
