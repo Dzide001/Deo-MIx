@@ -57,8 +57,8 @@ ColumnLayout {
     Item {
         Layout.alignment: Qt.AlignHCenter
         Layout.fillHeight: true
-        Layout.minimumHeight: 140
-        implicitWidth: 40
+        Layout.minimumHeight: 120
+        implicitWidth: 30
         opacity: root.trackLoaded ? 1.0 : 0.4
 
         Mixxx.ControlProxy {
@@ -138,13 +138,14 @@ ColumnLayout {
     }
     RowLayout {
         Layout.fillWidth: true
-        spacing: 4
+        spacing: 2
 
         Skin.ControlButton {
             Layout.fillWidth: true
             activeColor: root.accentColor
             enabled: root.trackLoaded
             group: root.group
+            implicitHeight: 20
             key: "pitch_down"
             opacity: enabled ? 1.0 : 0.4
             text: "-"
@@ -154,26 +155,34 @@ ColumnLayout {
             activeColor: root.accentColor
             enabled: root.trackLoaded
             group: root.group
-            key: "keylock"
-            opacity: enabled ? 1.0 : 0.4
-            text: "Lock"
-            toggleable: true
-        }
-        Skin.ControlButton {
-            Layout.fillWidth: true
-            activeColor: root.accentColor
-            enabled: root.trackLoaded
-            group: root.group
+            implicitHeight: 20
             key: "pitch_up"
             opacity: enabled ? 1.0 : 0.4
             text: "+"
         }
+    }
+    // Keylock and pitch-range switching aren't visible in the reference
+    // layout (their placement is an open decision per the spec), so these
+    // stay functional but visually secondary rather than matching pixel
+    // position to anything in the screenshot.
+    Skin.ControlButton {
+        Layout.fillWidth: true
+        activeColor: root.accentColor
+        enabled: root.trackLoaded
+        group: root.group
+        implicitHeight: 18
+        key: "keylock"
+        opacity: enabled ? 1.0 : 0.4
+        text: "KEY"
+        toggleable: true
     }
     Skin.RangeButton {
         Layout.fillWidth: true
         activeColor: root.accentColor
         enabled: root.trackLoaded
         group: root.group
+        implicitHeight: 18
         opacity: enabled ? 1.0 : 0.4
+        text: "RNG"
     }
 }

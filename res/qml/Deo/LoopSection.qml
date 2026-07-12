@@ -14,7 +14,7 @@ import "../Theme"
 // regular beatloop; holding it activates a rolling loop instead
 // (beatlooproll_*_activate is a momentary press/release control at the
 // engine level, so hold = on, release = off, same pattern as CUE in M1).
-ColumnLayout {
+RowLayout {
     id: root
 
     required property string group
@@ -25,7 +25,7 @@ ColumnLayout {
     property var beatSizes: [1 / 32, 1 / 16, 1 / 8, 1 / 4, 1 / 2, 1, 2, 4, 8, 16, 32, 64, 128, 256, 512]
     property int selectedIndex: 8 // 8 beats
 
-    spacing: 6
+    spacing: 4
 
     Mixxx.ControlProxy {
         id: trackLoadedControl
@@ -79,118 +79,137 @@ ColumnLayout {
         return Math.round(value).toString();
     }
 
-    Label {
-        Layout.alignment: Qt.AlignHCenter
-        color: Theme.deckLoopLabelColor
-        font.bold: true
-        font.family: Theme.fontFamily
-        text: "LOOP"
-    }
-    RowLayout {
-        Layout.fillWidth: true
-        enabled: root.trackLoaded
-        opacity: enabled ? 1.0 : 0.4
-        spacing: 4
+    // Rotated label on the left edge, matching the reference layout.
+    Item {
+        Layout.fillHeight: true
+        Layout.preferredWidth: 16
 
-        Skin.Button {
-            Layout.preferredWidth: 26
-            activeColor: root.accentColor
-            text: "<"
-
-            onClicked: {
-                if (root.loopActive) {
-                    loopHalve.trigger();
-                } else {
-                    root.selectedIndex = Math.max(0, root.selectedIndex - 1);
-                }
-            }
-        }
-        Skin.Button {
-            id: activateButton
-
-            property bool rolling: false
-
-            Layout.fillWidth: true
-            activeColor: root.accentColor
-            highlight: root.loopActive
-            text: root.formatBeatSize(root.beatSizes[root.selectedIndex])
-
-            onClicked: {
-                if (!root.loopActive && !rolling) {
-                    activateControl.trigger();
-                }
-            }
-            onPressAndHold: {
-                if (!root.loopActive) {
-                    rolling = true;
-                    rollControl.value = 1;
-                }
-            }
-            onReleased: {
-                if (rolling) {
-                    rollControl.value = 0;
-                    rolling = false;
-                }
-            }
-
-            Mixxx.ControlProxy {
-                id: activateControl
-
-                group: root.group
-                key: `beatloop_${root.beatSizes[root.selectedIndex]}_activate`
-            }
-            Mixxx.ControlProxy {
-                id: rollControl
-
-                group: root.group
-                key: `beatlooproll_${root.beatSizes[root.selectedIndex]}_activate`
-            }
-        }
-        Skin.Button {
-            Layout.preferredWidth: 26
-            activeColor: root.accentColor
-            text: ">"
-
-            onClicked: {
-                if (root.loopActive) {
-                    loopDouble.trigger();
-                } else {
-                    root.selectedIndex = Math.min(root.beatSizes.length - 1, root.selectedIndex + 1);
-                }
-            }
+        Label {
+            anchors.centerIn: parent
+            color: Theme.deckLoopLabelColor
+            font.bold: true
+            font.family: Theme.fontFamily
+            font.pixelSize: 10
+            rotation: -90
+            text: "LOOP"
         }
     }
-    RowLayout {
+    ColumnLayout {
         Layout.fillWidth: true
         spacing: 4
 
-        Skin.ControlButton {
+        RowLayout {
             Layout.fillWidth: true
-            activeColor: root.accentColor
             enabled: root.trackLoaded
-            group: root.group
-            key: "loop_in"
             opacity: enabled ? 1.0 : 0.4
-            text: "In"
+            spacing: 4
+
+            Skin.Button {
+                Layout.preferredWidth: 22
+                activeColor: root.accentColor
+                implicitHeight: 22
+                text: "<"
+
+                onClicked: {
+                    if (root.loopActive) {
+                        loopHalve.trigger();
+                    } else {
+                        root.selectedIndex = Math.max(0, root.selectedIndex - 1);
+                    }
+                }
+            }
+            Skin.Button {
+                id: activateButton
+
+                property bool rolling: false
+
+                Layout.fillWidth: true
+                activeColor: root.accentColor
+                highlight: root.loopActive
+                implicitHeight: 22
+                text: root.formatBeatSize(root.beatSizes[root.selectedIndex])
+
+                onClicked: {
+                    if (!root.loopActive && !rolling) {
+                        activateControl.trigger();
+                    }
+                }
+                onPressAndHold: {
+                    if (!root.loopActive) {
+                        rolling = true;
+                        rollControl.value = 1;
+                    }
+                }
+                onReleased: {
+                    if (rolling) {
+                        rollControl.value = 0;
+                        rolling = false;
+                    }
+                }
+
+                Mixxx.ControlProxy {
+                    id: activateControl
+
+                    group: root.group
+                    key: `beatloop_${root.beatSizes[root.selectedIndex]}_activate`
+                }
+                Mixxx.ControlProxy {
+                    id: rollControl
+
+                    group: root.group
+                    key: `beatlooproll_${root.beatSizes[root.selectedIndex]}_activate`
+                }
+            }
+            Skin.Button {
+                Layout.preferredWidth: 22
+                activeColor: root.accentColor
+                implicitHeight: 22
+                text: ">"
+
+                onClicked: {
+                    if (root.loopActive) {
+                        loopDouble.trigger();
+                    } else {
+                        root.selectedIndex = Math.min(root.beatSizes.length - 1, root.selectedIndex + 1);
+                    }
+                }
+            }
         }
-        Skin.ControlButton {
+        RowLayout {
             Layout.fillWidth: true
-            activeColor: root.accentColor
-            enabled: root.trackLoaded
-            group: root.group
-            key: "loop_out"
-            opacity: enabled ? 1.0 : 0.4
-            text: "Out"
-        }
-        Skin.ControlButton {
-            Layout.fillWidth: true
-            activeColor: root.accentColor
-            enabled: root.trackLoaded
-            group: root.group
-            key: root.loopActive ? "loop_enabled" : "reloop_toggle"
-            opacity: enabled ? 1.0 : 0.4
-            text: root.loopActive ? "Exit" : "Recall"
-            toggleable: root.loopActive
+            spacing: 4
+
+            Skin.ControlButton {
+                Layout.fillWidth: true
+                activeColor: root.accentColor
+                enabled: root.trackLoaded
+                group: root.group
+                implicitHeight: 24
+                key: "loop_in"
+                opacity: enabled ? 1.0 : 0.4
+                text: "In"
+            }
+            Skin.ControlButton {
+                Layout.fillWidth: true
+                activeColor: root.accentColor
+                enabled: root.trackLoaded
+                group: root.group
+                implicitHeight: 24
+                key: "loop_out"
+                opacity: enabled ? 1.0 : 0.4
+                text: "Out"
+            }
+            Skin.ControlButton {
+                Layout.fillWidth: true
+                activeColor: root.accentColor
+                enabled: root.trackLoaded
+                group: root.group
+                implicitHeight: 24
+                key: root.loopActive ? "loop_enabled" : "reloop_toggle"
+                opacity: enabled ? 1.0 : 0.4
+                text: root.loopActive ? "Exit" : "Recall"
+                toggleable: root.loopActive
+            }
         }
     }
 }

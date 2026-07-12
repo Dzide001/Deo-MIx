@@ -19,7 +19,7 @@ Item {
 
     readonly property bool trackLoaded: trackLoadedControl.value > 0
 
-    implicitWidth: 320
+    implicitWidth: 280
     implicitHeight: content.implicitHeight
 
     Mixxx.ControlProxy {
@@ -45,7 +45,7 @@ Item {
 
         LayoutMirroring.enabled: root.mirrored
         LayoutMirroring.childrenInherit: true
-        spacing: 12
+        spacing: 8
 
         RowLayout {
             Layout.fillWidth: true
@@ -75,41 +75,56 @@ Item {
         }
         RowLayout {
             Layout.alignment: Qt.AlignHCenter
-            spacing: 12
+            spacing: 4
 
-            Deo.JogWheel {
-                id: jogWheel
+            // Jog wheel with VINYL/SLIP as small pills overlaid in its
+            // top-right corner, matching the reference layout, rather than
+            // a full-width row underneath.
+            Item {
+                implicitWidth: jogWheel.implicitWidth
+                implicitHeight: jogWheel.implicitHeight
 
-                accentColor: root.accentColor
-                group: root.group
-                vinylMode: vinylToggle.checked
+                Deo.JogWheel {
+                    id: jogWheel
+
+                    anchors.fill: parent
+                    accentColor: root.accentColor
+                    group: root.group
+                    vinylMode: vinylToggle.checked
+                }
+                ColumnLayout {
+                    anchors.top: parent.top
+                    anchors.right: parent.right
+                    anchors.margins: 8
+                    spacing: 3
+                    z: 2
+
+                    Skin.Button {
+                        id: vinylToggle
+
+                        activeColor: root.accentColor
+                        checkable: true
+                        checked: true
+                        implicitHeight: 18
+                        implicitWidth: 50
+                        text: "VINYL"
+                    }
+                    Skin.ControlButton {
+                        activeColor: root.accentColor
+                        group: root.group
+                        implicitHeight: 18
+                        implicitWidth: 50
+                        key: "slip_enabled"
+                        text: "SLIP"
+                        toggleable: true
+                    }
+                }
             }
             Deo.PitchFader {
                 Layout.fillHeight: true
+                Layout.preferredWidth: 34
                 accentColor: root.accentColor
                 group: root.group
-            }
-        }
-        RowLayout {
-            Layout.fillWidth: true
-            spacing: 8
-
-            Skin.Button {
-                id: vinylToggle
-
-                Layout.fillWidth: true
-                activeColor: root.accentColor
-                checkable: true
-                checked: true
-                text: "Vinyl"
-            }
-            Skin.ControlButton {
-                Layout.fillWidth: true
-                activeColor: root.accentColor
-                group: root.group
-                key: "slip_enabled"
-                text: "Slip"
-                toggleable: true
             }
         }
         Deo.LoopSection {

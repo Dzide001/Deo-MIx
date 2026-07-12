@@ -32,8 +32,8 @@ Item {
     readonly property real bendSensitivity: 0.5
     readonly property real pausedScrubSensitivity: 0.5
 
-    implicitWidth: 180
-    implicitHeight: 180
+    implicitWidth: 160
+    implicitHeight: 160
 
     Mixxx.ControlProxy {
         id: trackLoadedControl
