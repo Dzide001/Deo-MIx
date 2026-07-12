@@ -41,6 +41,10 @@ ColumnLayout {
         }
     }
 
+    Deo.CuratedEffectsModel {
+        id: curatedEffects
+    }
+
     Deo.BackspinSlot {
         Layout.fillWidth: true
         accentColor: root.accentColor
@@ -49,12 +53,14 @@ ColumnLayout {
     Skin.EffectSlot {
         Layout.fillWidth: true
         accentColor: root.accentColor
+        effectListModel: curatedEffects
         effectNumber: 1
         unitNumber: root.unitNumber
     }
     Skin.EffectSlot {
         Layout.fillWidth: true
         accentColor: root.accentColor
+        effectListModel: curatedEffects
         effectNumber: 2
         unitNumber: root.unitNumber
     }

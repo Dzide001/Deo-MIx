@@ -13,6 +13,7 @@ Item {
     readonly property string group: slot.group
     property real maxSelectorWidth: 300
     property color accentColor: Theme.effectColor
+    property var effectListModel: Mixxx.EffectsManager.visibleEffectsModel
 
     height: 50
 
@@ -48,7 +49,7 @@ Item {
             anchors.right: effectMetaKnob.left
             anchors.margins: 5
             textRole: "display"
-            model: Mixxx.EffectsManager.visibleEffectsModel
+            model: root.effectListModel
             onActivated: (index) => {
                 const effectId = model.get(index).effectId;
                 if (root.slot.effectId != effectId)
