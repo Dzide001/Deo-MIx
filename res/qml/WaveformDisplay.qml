@@ -152,27 +152,123 @@ Item {
             // _position CO pattern as Hotcue.qml and
             // WaveformOverviewHotcueMarker.qml. 8 matches the hotcue count
             // used elsewhere in this skin (Deck/HotcueAndStem.qml).
-            Repeater {
-                model: 8
+            //
+            // Written out literally rather than via Repeater:
+            // WaveformRendererMark's default property is a strongly-typed
+            // QQmlListProperty<WaveformMark>, which rejects a generic
+            // Repeater/Item at assignment ("Cannot assign to non-existent
+            // default property") — every other mark in this block is a
+            // literal instance for the same reason.
+            Mixxx.WaveformMark {
+                align: 'bottom|left'
+                color: hotcue1Color.value >= 0 ? "#" + hotcue1Color.value.toString(16).padStart(6, "0") : '#00d9ff'
+                control: "hotcue_1_position"
+                text: '1'
+                textColor: '#1a1a1a'
 
-                Mixxx.WaveformMark {
-                    id: hotcueMark
+                Mixxx.ControlProxy {
+                    id: hotcue1Color
 
-                    required property int index
-                    readonly property int hotcueNumber: index + 1
+                    group: root.group
+                    key: "hotcue_1_color"
+                }
+            }
+            Mixxx.WaveformMark {
+                align: 'bottom|left'
+                color: hotcue2Color.value >= 0 ? "#" + hotcue2Color.value.toString(16).padStart(6, "0") : '#00d9ff'
+                control: "hotcue_2_position"
+                text: '2'
+                textColor: '#1a1a1a'
 
-                    align: 'bottom|left'
-                    color: hotcueColorControl.value >= 0 ? "#" + hotcueColorControl.value.toString(16).padStart(6, "0") : '#00d9ff'
-                    control: "hotcue_" + hotcueNumber + "_position"
-                    text: "" + hotcueNumber
-                    textColor: '#1a1a1a'
+                Mixxx.ControlProxy {
+                    id: hotcue2Color
 
-                    Mixxx.ControlProxy {
-                        id: hotcueColorControl
+                    group: root.group
+                    key: "hotcue_2_color"
+                }
+            }
+            Mixxx.WaveformMark {
+                align: 'bottom|left'
+                color: hotcue3Color.value >= 0 ? "#" + hotcue3Color.value.toString(16).padStart(6, "0") : '#00d9ff'
+                control: "hotcue_3_position"
+                text: '3'
+                textColor: '#1a1a1a'
 
-                        group: root.group
-                        key: "hotcue_" + hotcueMark.hotcueNumber + "_color"
-                    }
+                Mixxx.ControlProxy {
+                    id: hotcue3Color
+
+                    group: root.group
+                    key: "hotcue_3_color"
+                }
+            }
+            Mixxx.WaveformMark {
+                align: 'bottom|left'
+                color: hotcue4Color.value >= 0 ? "#" + hotcue4Color.value.toString(16).padStart(6, "0") : '#00d9ff'
+                control: "hotcue_4_position"
+                text: '4'
+                textColor: '#1a1a1a'
+
+                Mixxx.ControlProxy {
+                    id: hotcue4Color
+
+                    group: root.group
+                    key: "hotcue_4_color"
+                }
+            }
+            Mixxx.WaveformMark {
+                align: 'bottom|left'
+                color: hotcue5Color.value >= 0 ? "#" + hotcue5Color.value.toString(16).padStart(6, "0") : '#00d9ff'
+                control: "hotcue_5_position"
+                text: '5'
+                textColor: '#1a1a1a'
+
+                Mixxx.ControlProxy {
+                    id: hotcue5Color
+
+                    group: root.group
+                    key: "hotcue_5_color"
+                }
+            }
+            Mixxx.WaveformMark {
+                align: 'bottom|left'
+                color: hotcue6Color.value >= 0 ? "#" + hotcue6Color.value.toString(16).padStart(6, "0") : '#00d9ff'
+                control: "hotcue_6_position"
+                text: '6'
+                textColor: '#1a1a1a'
+
+                Mixxx.ControlProxy {
+                    id: hotcue6Color
+
+                    group: root.group
+                    key: "hotcue_6_color"
+                }
+            }
+            Mixxx.WaveformMark {
+                align: 'bottom|left'
+                color: hotcue7Color.value >= 0 ? "#" + hotcue7Color.value.toString(16).padStart(6, "0") : '#00d9ff'
+                control: "hotcue_7_position"
+                text: '7'
+                textColor: '#1a1a1a'
+
+                Mixxx.ControlProxy {
+                    id: hotcue7Color
+
+                    group: root.group
+                    key: "hotcue_7_color"
+                }
+            }
+            Mixxx.WaveformMark {
+                align: 'bottom|left'
+                color: hotcue8Color.value >= 0 ? "#" + hotcue8Color.value.toString(16).padStart(6, "0") : '#00d9ff'
+                control: "hotcue_8_position"
+                text: '8'
+                textColor: '#1a1a1a'
+
+                Mixxx.ControlProxy {
+                    id: hotcue8Color
+
+                    group: root.group
+                    key: "hotcue_8_color"
                 }
             }
         }
