@@ -156,22 +156,21 @@ Item {
             // Written out literally rather than via Repeater:
             // WaveformRendererMark's default property is a strongly-typed
             // QQmlListProperty<WaveformMark>, which rejects a generic
-            // Repeater/Item at assignment ("Cannot assign to non-existent
-            // default property") — every other mark in this block is a
-            // literal instance for the same reason.
+            // Repeater/Item at assignment. The hotcueNColor ControlProxies
+            // referenced below live as top-level siblings further down in
+            // this file (alongside scratchPositionEnableControl etc.),
+            // not nested inside these marks: WaveformMark itself has no
+            // children/default property either (it's a lightweight data
+            // descriptor, not a QQuickItem), so a nested ControlProxy hits
+            // the exact same "Cannot assign to non-existent default
+            // property" failure — these must only be referenced by id in
+            // a binding expression, never nested.
             Mixxx.WaveformMark {
                 align: 'bottom|left'
                 color: hotcue1Color.value >= 0 ? "#" + hotcue1Color.value.toString(16).padStart(6, "0") : '#00d9ff'
                 control: "hotcue_1_position"
                 text: '1'
                 textColor: '#1a1a1a'
-
-                Mixxx.ControlProxy {
-                    id: hotcue1Color
-
-                    group: root.group
-                    key: "hotcue_1_color"
-                }
             }
             Mixxx.WaveformMark {
                 align: 'bottom|left'
@@ -179,13 +178,6 @@ Item {
                 control: "hotcue_2_position"
                 text: '2'
                 textColor: '#1a1a1a'
-
-                Mixxx.ControlProxy {
-                    id: hotcue2Color
-
-                    group: root.group
-                    key: "hotcue_2_color"
-                }
             }
             Mixxx.WaveformMark {
                 align: 'bottom|left'
@@ -193,13 +185,6 @@ Item {
                 control: "hotcue_3_position"
                 text: '3'
                 textColor: '#1a1a1a'
-
-                Mixxx.ControlProxy {
-                    id: hotcue3Color
-
-                    group: root.group
-                    key: "hotcue_3_color"
-                }
             }
             Mixxx.WaveformMark {
                 align: 'bottom|left'
@@ -207,13 +192,6 @@ Item {
                 control: "hotcue_4_position"
                 text: '4'
                 textColor: '#1a1a1a'
-
-                Mixxx.ControlProxy {
-                    id: hotcue4Color
-
-                    group: root.group
-                    key: "hotcue_4_color"
-                }
             }
             Mixxx.WaveformMark {
                 align: 'bottom|left'
@@ -221,13 +199,6 @@ Item {
                 control: "hotcue_5_position"
                 text: '5'
                 textColor: '#1a1a1a'
-
-                Mixxx.ControlProxy {
-                    id: hotcue5Color
-
-                    group: root.group
-                    key: "hotcue_5_color"
-                }
             }
             Mixxx.WaveformMark {
                 align: 'bottom|left'
@@ -235,13 +206,6 @@ Item {
                 control: "hotcue_6_position"
                 text: '6'
                 textColor: '#1a1a1a'
-
-                Mixxx.ControlProxy {
-                    id: hotcue6Color
-
-                    group: root.group
-                    key: "hotcue_6_color"
-                }
             }
             Mixxx.WaveformMark {
                 align: 'bottom|left'
@@ -249,13 +213,6 @@ Item {
                 control: "hotcue_7_position"
                 text: '7'
                 textColor: '#1a1a1a'
-
-                Mixxx.ControlProxy {
-                    id: hotcue7Color
-
-                    group: root.group
-                    key: "hotcue_7_color"
-                }
             }
             Mixxx.WaveformMark {
                 align: 'bottom|left'
@@ -263,15 +220,56 @@ Item {
                 control: "hotcue_8_position"
                 text: '8'
                 textColor: '#1a1a1a'
-
-                Mixxx.ControlProxy {
-                    id: hotcue8Color
-
-                    group: root.group
-                    key: "hotcue_8_color"
-                }
             }
         }
+    }
+    Mixxx.ControlProxy {
+        id: hotcue1Color
+
+        group: root.group
+        key: "hotcue_1_color"
+    }
+    Mixxx.ControlProxy {
+        id: hotcue2Color
+
+        group: root.group
+        key: "hotcue_2_color"
+    }
+    Mixxx.ControlProxy {
+        id: hotcue3Color
+
+        group: root.group
+        key: "hotcue_3_color"
+    }
+    Mixxx.ControlProxy {
+        id: hotcue4Color
+
+        group: root.group
+        key: "hotcue_4_color"
+    }
+    Mixxx.ControlProxy {
+        id: hotcue5Color
+
+        group: root.group
+        key: "hotcue_5_color"
+    }
+    Mixxx.ControlProxy {
+        id: hotcue6Color
+
+        group: root.group
+        key: "hotcue_6_color"
+    }
+    Mixxx.ControlProxy {
+        id: hotcue7Color
+
+        group: root.group
+        key: "hotcue_7_color"
+    }
+    Mixxx.ControlProxy {
+        id: hotcue8Color
+
+        group: root.group
+        key: "hotcue_8_color"
     }
     Mixxx.ControlProxy {
         id: scratchPositionEnableControl
