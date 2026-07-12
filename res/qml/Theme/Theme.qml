@@ -4,7 +4,7 @@ import QtQuick 2.12
 QtObject {
     property color accent: "#2D4EA1"
     property color accentColor: "#3a60be"
-    property color backgroundColor: "#1e1e1e"
+    property color backgroundColor: "#101113"
     property color blue: "#01dcfc"
     property color bpmSliderBarColor: blue
     property color buttonActiveColor: white
@@ -17,9 +17,11 @@ QtObject {
     property color darkGray2: "#242424"
     property color darkGray3: "#3F3F3F"
     property color darkGray4: "#202020"
-    property color deckAAccent: "#1BC5B8"
+    property color deckAAccent: "#3C7993"
+    property color deckAAccentDim: "#2A5A6B"
     property color deckActiveColor: green
-    property color deckBAccent: "#FF5C5C"
+    property color deckBAccent: "#9F393B"
+    property color deckBAccentDim: "#4C1C1F"
     property color deckBackgroundColor: darkGray
     property color deckBeatjumpBackgroundColor: midGray3
     property color deckBeatjumpLabelColor: darkGray3
@@ -27,8 +29,12 @@ QtObject {
     property color deckInfoBarBackgroundColor: '#0e0e0e'
     property color deckLineColor: darkGray2
     property color deckLoopBackgroundColor: midGray3
-    property color deckLoopLabelColor: darkGray3
+    property color deckLoopLabelColor: "#A6A6A6"
+    property color deckPanelAltBackground: "#454547"
+    property color deckPanelBackground: "#36363A"
+    property color deckTextBright: "#D4D4D4"
     property color deckTextColor: white
+    property color deckTextSecondary: "#A6A6A6"
     property color effectColor: yellow
     property color effectUnitColor: red
     property color embeddedBackgroundColor: "#a0000000"
@@ -36,7 +42,7 @@ QtObject {
     property color eqHighColor: white
     property color eqLowColor: white
     property color eqMidColor: white
-    property string fontFamily: "Open Sans"
+    property string fontFamily: "Segoe UI, Roboto, sans-serif"
     property color gainKnobColor: blue
     property color green: "#85c85b"
     property string imgBpmSliderBackground: "images/slider_bpm.svg"

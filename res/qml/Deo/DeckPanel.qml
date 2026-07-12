@@ -6,9 +6,11 @@ import "." as Deo
 import ".." as Skin
 import "../Theme"
 
-// Deck shell: FX rack (M3) beside jog wheel + pitch fader (M2), VINYL/SLIP
-// toggles, loop section (M2), and transport row. Two instances of this,
-// mirrored left/right, make up the deck view.
+// Deck shell, arranged per Deo Pro dj_layout_spec.json: a full-width
+// track-info header, then a two-column body — [FX rack + loop section]
+// beside [jog wheel/pitch fader + transport row] — rather than
+// everything stacked in one column. Two instances of this, mirrored
+// left/right, make up the deck view.
 Item {
     id: root
 
@@ -30,6 +32,13 @@ Item {
         key: "track_loaded"
     }
 
+    Rectangle {
+        anchors.fill: parent
+        anchors.margins: -8
+        color: Theme.deckPanelBackground
+        z: -2
+    }
+
     // Drag an audio file from Finder onto the panel to load it; the M1
     // spec explicitly leaves the library/browser out of scope, so this is
     // the load path for exercising the acceptance criteria.
@@ -39,114 +48,153 @@ Item {
         z: -1
     }
 
-    RowLayout {
+    ColumnLayout {
         id: layout
 
         anchors.fill: parent
-
-        LayoutMirroring.enabled: root.mirrored
-        LayoutMirroring.childrenInherit: true
         spacing: 8
 
-        Deo.FXRack {
-            Layout.alignment: Qt.AlignTop
-            Layout.preferredWidth: 130
-            accentColor: root.accentColor
-            group: root.group
-            unitNumber: root.effectUnitNumber
-        }
-        ColumnLayout {
-            spacing: 8
+        RowLayout {
+            Layout.fillWidth: true
 
-            RowLayout {
-                Layout.fillWidth: true
+            LayoutMirroring.enabled: root.mirrored
+            LayoutMirroring.childrenInherit: true
 
-                Rectangle {
-                    width: 10
-                    height: 10
-                    radius: 5
-                    color: root.accentColor
-                }
-                Label {
-                    color: Theme.deckTextColor
-                    font.bold: true
-                    font.family: Theme.fontFamily
-                    font.pixelSize: Theme.textFontPixelSize
-                    text: root.label
-                }
-                Item {
-                    Layout.fillWidth: true
-                }
-                Label {
-                    color: root.trackLoaded ? Theme.deckTextColor : Theme.midGray3
-                    font.family: Theme.fontFamily
-                    font.pixelSize: Theme.textFontPixelSize
-                    text: root.trackLoaded ? "" : "No track loaded — drop a file here"
-                }
+            Rectangle {
+                width: 10
+                height: 10
+                radius: 5
+                color: root.accentColor
             }
-            RowLayout {
-                Layout.alignment: Qt.AlignHCenter
-                spacing: 4
+            Label {
+                color: Theme.deckTextBright
+                font.bold: true
+                font.family: Theme.fontFamily
+                font.pixelSize: Theme.textFontPixelSize
+                text: root.label
+            }
+            Item {
+                Layout.fillWidth: true
+            }
+            Label {
+                color: root.trackLoaded ? Theme.deckTextBright : Theme.deckTextSecondary
+                font.family: Theme.fontFamily
+                font.pixelSize: Theme.textFontPixelSize
+                text: root.trackLoaded ? "" : "No track loaded — drop a file here"
+            }
+        }
+        RowLayout {
+            id: body
 
-                // Jog wheel with VINYL/SLIP as small pills overlaid in its
-                // top-right corner, matching the reference layout, rather
-                // than a full-width row underneath.
-                Item {
-                    implicitWidth: jogWheel.implicitWidth
-                    implicitHeight: jogWheel.implicitHeight
+            Layout.fillWidth: true
+            Layout.fillHeight: true
 
-                    Deo.JogWheel {
-                        id: jogWheel
+            LayoutMirroring.enabled: root.mirrored
+            LayoutMirroring.childrenInherit: true
+            spacing: 10
 
-                        anchors.fill: parent
-                        accentColor: root.accentColor
-                        group: root.group
-                        vinylMode: vinylToggle.checked
-                    }
-                    ColumnLayout {
-                        anchors.top: parent.top
-                        anchors.right: parent.right
-                        anchors.margins: 8
-                        spacing: 3
-                        z: 2
+            // Left column: FX rack + loop section.
+            ColumnLayout {
+                Layout.preferredWidth: 155
+                Layout.fillHeight: true
+                spacing: 8
 
-                        Skin.Button {
-                            id: vinylToggle
-
-                            activeColor: root.accentColor
-                            checkable: true
-                            checked: true
-                            implicitHeight: 18
-                            implicitWidth: 50
-                            text: "VINYL"
-                        }
-                        Skin.ControlButton {
-                            activeColor: root.accentColor
-                            group: root.group
-                            implicitHeight: 18
-                            implicitWidth: 50
-                            key: "slip_enabled"
-                            text: "SLIP"
-                            toggleable: true
-                        }
-                    }
+                Deo.FXRack {
+                    Layout.fillWidth: true
+                    accentColor: root.accentColor
+                    group: root.group
+                    unitNumber: root.effectUnitNumber
                 }
-                Deo.PitchFader {
-                    Layout.fillHeight: true
-                    Layout.preferredWidth: 34
+                Deo.LoopSection {
+                    Layout.fillWidth: true
                     accentColor: root.accentColor
                     group: root.group
                 }
+                Item {
+                    Layout.fillHeight: true
+                }
             }
-            Deo.LoopSection {
+            // Right column: jog wheel/pitch fader + transport row.
+            ColumnLayout {
                 Layout.fillWidth: true
-                accentColor: root.accentColor
-                group: root.group
-            }
-            Deo.TransportRow {
-                Layout.fillWidth: true
-                accentColor: root.accentColor
-                group: root.group
+                Layout.fillHeight: true
+                spacing: 8
+
+                RowLayout {
+                    Layout.alignment: Qt.AlignHCenter
+                    spacing: 4
+
+                    ColumnLayout {
+                        spacing: 4
+
+                        // VINYL/SLIP row above the jog wheel, matching the
+                        // reference, plus an eject icon overlaid on the
+                        // wheel's top-left corner.
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: 4
+
+                            Skin.Button {
+                                id: vinylToggle
+
+                                Layout.fillWidth: true
+                                activeColor: root.accentColor
+                                checkable: true
+                                checked: true
+                                implicitHeight: 18
+                                text: "VINYL"
+                            }
+                            Skin.ControlButton {
+                                Layout.fillWidth: true
+                                activeColor: root.accentColor
+                                group: root.group
+                                implicitHeight: 18
+                                key: "slip_enabled"
+                                text: "SLIP"
+                                toggleable: true
+                            }
+                        }
+                        Item {
+                            implicitWidth: jogWheel.implicitWidth
+                            implicitHeight: jogWheel.implicitHeight
+
+                            Deo.JogWheel {
+                                id: jogWheel
+
+                                anchors.fill: parent
+                                accentColor: root.accentColor
+                                group: root.group
+                                vinylMode: vinylToggle.checked
+                            }
+                            Skin.ControlButton {
+                                anchors.top: parent.top
+                                anchors.left: parent.left
+                                anchors.margins: 6
+                                width: 20
+                                height: 20
+                                activeColor: root.accentColor
+                                group: root.group
+                                key: "eject"
+                                text: "⏏"
+                                z: 2
+                            }
+                        }
+                    }
+                    Deo.PitchFader {
+                        Layout.fillHeight: true
+                        Layout.preferredWidth: 34
+                        accentColor: root.accentColor
+                        group: root.group
+                    }
+                }
+                Deo.TransportRow {
+                    Layout.fillWidth: true
+                    accentColor: root.accentColor
+                    group: root.group
+                }
+                Item {
+                    Layout.fillHeight: true
+                }
             }
         }
     }
