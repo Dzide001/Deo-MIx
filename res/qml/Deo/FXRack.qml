@@ -13,11 +13,12 @@ import "../Theme"
 // per slot — not one row per slot bundling all three the way stock
 // Skin.EffectSlot lays things out (see git history for that version).
 // Built directly on Mixxx.EffectSlotProxy rather than Skin.EffectSlot so
-// each piece (selector/meta/expand) can live in its own column.
+// each piece (selector/meta/expand) can live in its own column. Each
+// dropdown row has a small enable toggle to its left, matching the
+// reference's effects-list popup (toggle switch beside each name).
 //
-// Row 1 is Backspin (fake — see notes below); rows 2-3 are two real
-// slots. unitNumber permanently routes to this deck's channel via
-// group_[ChannelN]_enable, same as before.
+// Row 1 is Backspin; rows 2-3 are two real slots. unitNumber permanently
+// routes to this deck's channel via group_[ChannelN]_enable.
 Item {
     id: root
 
@@ -53,20 +54,16 @@ Item {
             value = 1;
         }
     }
-    // Backspin isn't a real effect — EffectProcessor only ever sees an
-    // already-rendered buffer of forward-playing audio, with no access to
-    // playback position/direction, so a genuine reverse+speed-ramp
-    // backspin can't be an EffectProcessor plugin. This triggers the
-    // engine's existing reverseroll control directly instead (hold =
-    // real reverse + speed ramp, release = resume forward).
-    Mixxx.ControlProxy {
-        id: reverseRollControl
-
-        group: root.group
-        key: "reverseroll"
-    }
     Deo.CuratedEffectsModel {
         id: curatedEffects
+    }
+    ListModel {
+        id: backspinOnlyModel
+
+        ListElement {
+            display: "Backspin"
+            effectId: "backspin"
+        }
     }
 
     function syncComboBox(comboBox, slot) {
@@ -105,61 +102,133 @@ Item {
                     text: "FX"
                 }
             }
-            // Dropdowns column: Backspin (fake) + two real selectors.
+            // Dropdowns column: each row is a small enable toggle beside
+            // the effect selector, matching the reference's effects list.
             ColumnLayout {
                 Layout.preferredWidth: 76
                 spacing: 2
 
-                Skin.Button {
+                RowLayout {
                     Layout.fillWidth: true
-                    Layout.preferredHeight: 24
-                    activeColor: root.accentColor
-                    highlight: reverseRollControl.value > 0
-                    text: "Backspin"
+                    spacing: 2
 
-                    onPressed: reverseRollControl.value = 1
-                    onReleased: reverseRollControl.value = 0
-                }
-                Skin.ComboBox {
-                    id: slot1Selector
+                    // Backspin is a real, physics-based transport effect
+                    // (see engine/controls/ratecontrol.cpp updateBackspin())
+                    // — a continuous speed ramp from forward playback
+                    // through zero to a fast reverse and back, not a simple
+                    // reverse flip and not an EffectProcessor plugin
+                    // (those never get access to playback position/speed,
+                    // only an already-rendered forward-playing buffer).
+                    // backspin_activate is a one-shot trigger, not a
+                    // hold/release control.
+                    Skin.ControlButton {
+                        Layout.preferredWidth: 16
+                        Layout.fillHeight: true
+                        activeColor: root.accentColor
+                        enabled: false
+                        group: root.group
+                        key: "backspin_enabled"
+                        text: ""
+                        toggleable: true
 
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: 24
-                    model: curatedEffects
-                    textRole: "display"
+                        Mixxx.ControlProxy {
+                            id: backspinActivateControl
 
-                    Component.onCompleted: root.syncComboBox(slot1Selector, root.slot1)
-                    onActivated: index => {
-                        root.slot1.effectId = model.get(index).effectId;
+                            group: root.group
+                            key: "backspin_activate"
+                        }
                     }
+                    Item {
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 24
 
-                    Connections {
-                        function onEffectIdChanged() {
-                            root.syncComboBox(slot1Selector, root.slot1);
+                        Skin.ComboBox {
+                            id: backspinCombo
+
+                            anchors.fill: parent
+                            currentIndex: 0
+                            model: backspinOnlyModel
+                            textRole: "display"
+                        }
+                        // A real dropdown with a single fixed entry has
+                        // nothing useful to open; this overlay makes the
+                        // whole row a one-shot trigger instead, visually
+                        // consistent with the other two dropdown rows.
+                        MouseArea {
+                            anchors.fill: parent
+
+                            onClicked: backspinActivateControl.trigger()
+                        }
+                    }
+                }
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 2
+
+                    Skin.ControlButton {
+                        Layout.preferredWidth: 16
+                        Layout.fillHeight: true
+                        activeColor: root.accentColor
+                        group: root.slot1.group
+                        key: "enabled"
+                        text: ""
+                        toggleable: true
+                    }
+                    Skin.ComboBox {
+                        id: slot1Selector
+
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 24
+                        model: curatedEffects
+                        textRole: "display"
+
+                        Component.onCompleted: root.syncComboBox(slot1Selector, root.slot1)
+                        onActivated: index => {
+                            root.slot1.effectId = model.get(index).effectId;
                         }
 
-                        target: root.slot1
+                        Connections {
+                            function onEffectIdChanged() {
+                                root.syncComboBox(slot1Selector, root.slot1);
+                            }
+
+                            target: root.slot1
+                        }
                     }
                 }
-                Skin.ComboBox {
-                    id: slot2Selector
-
+                RowLayout {
                     Layout.fillWidth: true
-                    Layout.preferredHeight: 24
-                    model: curatedEffects
-                    textRole: "display"
+                    spacing: 2
 
-                    Component.onCompleted: root.syncComboBox(slot2Selector, root.slot2)
-                    onActivated: index => {
-                        root.slot2.effectId = model.get(index).effectId;
+                    Skin.ControlButton {
+                        Layout.preferredWidth: 16
+                        Layout.fillHeight: true
+                        activeColor: root.accentColor
+                        group: root.slot2.group
+                        key: "enabled"
+                        text: ""
+                        toggleable: true
                     }
+                    Skin.ComboBox {
+                        id: slot2Selector
 
-                    Connections {
-                        function onEffectIdChanged() {
-                            root.syncComboBox(slot2Selector, root.slot2);
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 24
+                        model: curatedEffects
+                        textRole: "display"
+
+                        Component.onCompleted: root.syncComboBox(slot2Selector, root.slot2)
+                        onActivated: index => {
+                            root.slot2.effectId = model.get(index).effectId;
                         }
 
-                        target: root.slot2
+                        Connections {
+                            function onEffectIdChanged() {
+                                root.syncComboBox(slot2Selector, root.slot2);
+                            }
+
+                            target: root.slot2
+                        }
                     }
                 }
             }

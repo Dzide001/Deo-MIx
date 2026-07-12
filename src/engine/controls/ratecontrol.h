@@ -96,6 +96,15 @@ private:
   double getJogFactor() const;
   double getWheelFactor() const;
   SyncMode getSyncMode() const;
+  // Advances and returns the current backspin playback-rate multiplier.
+  // Only ever called from calculateSpeed() (audio thread); backspin_activate
+  // is edge-detected here too rather than via a Qt signal/slot, since a
+  // slot invoked from the thread that set the control would race with this
+  // function running on the audio thread. All cross-thread-visible state
+  // (m_pBackspinActivate, m_pBackspinEnabled, m_pKeylockEnabled) is backed
+  // by ControlObject, which is safe to read/write from either thread; the
+  // plain member variables below are only ever touched from here.
+  double updateBackspin(std::size_t samplesPerBuffer);
 
   // Set rate change of the temporary pitch rate
   void setRateTemp(double v);
@@ -143,9 +152,23 @@ private:
   std::unique_ptr<ControlObject> m_pJog;
   std::unique_ptr<Rotary> m_pJogFilter;
 
+  // Backspin: a physics-style transport effect (continuous speed ramp from
+  // normal playback through zero to a fast reverse, then handing back to
+  // forward playback), not a simple reverse flip. See updateBackspin().
+  std::unique_ptr<ControlPushButton> m_pBackspinActivate;
+  std::unique_ptr<ControlObject> m_pBackspinEnabled;
+  bool m_backspinButtonWasPressed;
+  bool m_backspinActive;
+  double m_backspinElapsedSeconds;
+  double m_backspinStartRate;
+  double m_backspinPriorKeylockValue;
+  static constexpr double kBackspinDurationSeconds = 0.8;
+  static constexpr double kBackspinMaxReverseRate = -8.0;
+
   ControlObject* m_pVCEnabled;
   ControlObject* m_pVCScratching;
   ControlObject* m_pVCMode;
+  ControlObject* m_pKeylockEnabled;
 
   PollingControlProxy m_syncMode;
   PollingControlProxy m_slipEnabled;

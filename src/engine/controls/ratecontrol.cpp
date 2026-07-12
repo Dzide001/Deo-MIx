@@ -100,9 +100,19 @@ RateControl::RateControl(const QString& group, UserSettingsPointer pConfig)
                   ConfigKey(group, QStringLiteral("jog")))),
           // FIXME: The filter length should be dependent on sample rate/block size or something
           m_pJogFilter(std::make_unique<Rotary>(25)),
+          m_pBackspinActivate(std::make_unique<ControlPushButton>(
+                  ConfigKey(group, QStringLiteral("backspin_activate")))),
+          m_pBackspinEnabled(std::make_unique<ControlObject>(
+                  ConfigKey(group, QStringLiteral("backspin_enabled")))),
+          m_backspinButtonWasPressed(false),
+          m_backspinActive(false),
+          m_backspinElapsedSeconds(0.0),
+          m_backspinStartRate(1.0),
+          m_backspinPriorKeylockValue(0.0),
           m_pVCEnabled(nullptr),
           m_pVCScratching(nullptr),
           m_pVCMode(nullptr),
+          m_pKeylockEnabled(nullptr),
           m_syncMode(group, QStringLiteral("sync_mode")),
           m_slipEnabled(group, QStringLiteral("slip_enabled")),
           m_wrapAroundCount(0),
@@ -111,6 +121,7 @@ RateControl::RateControl(const QString& group, UserSettingsPointer pConfig)
           m_bTempStarted(false),
           m_tempRateRatio(0.0),
           m_dRateTempRampChange(0.0) {
+    m_pBackspinEnabled->setReadOnly();
     // Vinyl control COs are only created for main decks
     if (PlayerManager::isDeckGroup(getGroup())) {
         m_pVCEnabled = ControlObject::getControl(
@@ -123,6 +134,10 @@ RateControl::RateControl(const QString& group, UserSettingsPointer pConfig)
                 ConfigKey(getGroup(), QStringLiteral("vinylcontrol_mode")),
                 ControlFlag::NoAssertIfMissing);
     }
+    // Created earlier by EngineBuffer, so this is safe to look up here.
+    m_pKeylockEnabled = ControlObject::getControl(
+            ConfigKey(getGroup(), QStringLiteral("keylock")),
+            ControlFlag::NoAssertIfMissing);
     // This is the resulting rate ratio that can be used for display or calculations.
     // The track original rate ratio is 1.
     connect(m_pRateRatio.get(),
@@ -406,6 +421,37 @@ double RateControl::calculateSpeed(double baserate,
     *pReportScratching = false;
     *pReportReverse = false;
 
+    // Edge-detect backspin_activate every buffer, regardless of state.
+    // This has to happen here (audio thread) rather than via a Qt
+    // signal/slot connected to the control, since that slot would run on
+    // whatever thread set the control and race with this function.
+    const bool backspinPressed = m_pBackspinActivate->toBool();
+    const bool backspinRisingEdge = backspinPressed && !m_backspinButtonWasPressed;
+    m_backspinButtonWasPressed = backspinPressed;
+
+    if (!m_backspinActive && backspinRisingEdge && !paused) {
+        // There's no forward motion to brake out of while paused, so
+        // presses are ignored in that case rather than starting a
+        // sequence.
+        m_backspinActive = true;
+        m_backspinElapsedSeconds = 0.0;
+        m_backspinStartRate = m_pRateRatio->get();
+        if (m_pKeylockEnabled) {
+            m_backspinPriorKeylockValue = m_pKeylockEnabled->get();
+            m_pKeylockEnabled->set(0.0);
+        }
+        m_pBackspinEnabled->set(1.0);
+    }
+
+    // Backspin overrides everything else (searching, scratch, sync, the
+    // reverse-button flip) while active, the same way a real turntable
+    // brake would dominate whatever else the deck was doing.
+    if (m_backspinActive) {
+        double rate = updateBackspin(samplesPerBuffer);
+        *pReportReverse = rate < 0;
+        return rate;
+    }
+
     processTempRate(samplesPerBuffer);
 
     double rate;
@@ -512,6 +558,35 @@ double RateControl::calculateSpeed(double baserate,
             }
         }
     }
+    return rate;
+}
+
+double RateControl::updateBackspin(std::size_t samplesPerBuffer) {
+    // Precondition: m_backspinActive is already true; triggering a new
+    // sequence is handled by the caller (calculateSpeed()) before this is
+    // called, since it needs the rising-edge check to run every buffer
+    // regardless of whether a sequence is currently active.
+    const double sampleRate = m_pSampleRate.get();
+    if (sampleRate > 0) {
+        m_backspinElapsedSeconds += static_cast<double>(samplesPerBuffer) / sampleRate;
+    }
+
+    // Quadratic ease-in: fast acceleration into the reverse spin, matching
+    // the "throw" of a real backspin rather than a linear ramp.
+    const double progress = math_min(1.0, m_backspinElapsedSeconds / kBackspinDurationSeconds);
+    const double rate = m_backspinStartRate +
+            (kBackspinMaxReverseRate - m_backspinStartRate) * progress * progress;
+
+    if (progress >= 1.0) {
+        // Sequence complete. Hand back to normal forward playback from the
+        // new (reversed) position and restore keylock.
+        m_backspinActive = false;
+        if (m_pKeylockEnabled) {
+            m_pKeylockEnabled->set(m_backspinPriorKeylockValue);
+        }
+        m_pBackspinEnabled->set(0.0);
+    }
+
     return rate;
 }
 
