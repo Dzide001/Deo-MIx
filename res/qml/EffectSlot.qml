@@ -12,6 +12,7 @@ Item {
     property bool expanded: false
     readonly property string group: slot.group
     property real maxSelectorWidth: 300
+    property color accentColor: Theme.effectColor
 
     height: 50
 
@@ -35,7 +36,7 @@ Item {
             key: "enabled"
             toggleable: true
             text: "ON"
-            activeColor: Theme.effectColor
+            activeColor: root.accentColor
         }
 
         Skin.ComboBox {
@@ -83,7 +84,7 @@ Item {
             width: 40
             group: root.group
             key: "meta"
-            color: Theme.effectColor
+            color: root.accentColor
         }
     }
 
@@ -134,7 +135,7 @@ Item {
                 arcStart: 0
                 group: root.group
                 key: parameter.controlKey
-                color: Theme.effectColor
+                color: root.accentColor
                 visible: parameter.isKnob
 
                 Mixxx.ControlProxy {
@@ -155,7 +156,7 @@ Item {
                 anchors.centerIn: parent
                 group: root.group
                 key: parameter.controlKey
-                activeColor: Theme.effectColor
+                activeColor: root.accentColor
                 visible: parameter.isButton
                 toggleable: true
                 text: "ON"

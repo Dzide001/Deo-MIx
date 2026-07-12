@@ -7,18 +7,18 @@ import QtQuick.Window
 import "Theme"
 
 // M1: jog wheel (VINYL/SLIP) + CUE/Play/SYNC. M2 adds the pitch fader and
-// loop section. FX rack, pads, mixer, waveform, and the library/browser
-// are still out of scope until later milestones.
+// loop section. M3 adds the per-deck FX rack. Pads, mixer, waveform, and
+// the library/browser are still out of scope until later milestones.
 ApplicationWindow {
     id: root
 
     color: Theme.backgroundColor
     height: 700
     minimumHeight: 560
-    minimumWidth: 760
+    minimumWidth: 900
     visible: true
     visibility: Mixxx.Config.configStartInFullscreenKey ? Window.FullScreen : Window.Windowed
-    width: 1040
+    width: 1240
 
     Mixxx.ControlProxy {
         group: "[App]"
@@ -50,14 +50,14 @@ ApplicationWindow {
         spacing: 48
 
         Deo.DeckPanel {
-            Layout.preferredWidth: 340
             accentColor: Theme.deckAAccent
+            effectUnitNumber: 1
             group: "[Channel1]"
             label: "DECK A"
         }
         Deo.DeckPanel {
-            Layout.preferredWidth: 340
             accentColor: Theme.deckBAccent
+            effectUnitNumber: 2
             group: "[Channel2]"
             label: "DECK B"
             mirrored: true
