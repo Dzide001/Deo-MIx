@@ -6,20 +6,19 @@ import QtQuick.Layouts
 import QtQuick.Window
 import "Theme"
 
-// Milestone 1: deck + transport only (jog wheel, CUE/Play/SYNC) for two
-// mirrored decks. Pitch fader, loops, FX rack, pads, mixer, waveform, and
-// the library/browser are explicitly out of scope until later milestones
-// (see milestone_1_deck_transport_spec.md).
+// M1: jog wheel (VINYL/SLIP) + CUE/Play/SYNC. M2 adds the pitch fader and
+// loop section. FX rack, pads, mixer, waveform, and the library/browser
+// are still out of scope until later milestones.
 ApplicationWindow {
     id: root
 
     color: Theme.backgroundColor
-    height: 640
-    minimumHeight: 480
-    minimumWidth: 640
+    height: 700
+    minimumHeight: 560
+    minimumWidth: 760
     visible: true
     visibility: Mixxx.Config.configStartInFullscreenKey ? Window.FullScreen : Window.Windowed
-    width: 900
+    width: 1040
 
     Mixxx.ControlProxy {
         group: "[App]"
@@ -51,13 +50,13 @@ ApplicationWindow {
         spacing: 48
 
         Deo.DeckPanel {
-            Layout.preferredWidth: 300
+            Layout.preferredWidth: 340
             accentColor: Theme.deckAAccent
             group: "[Channel1]"
             label: "DECK A"
         }
         Deo.DeckPanel {
-            Layout.preferredWidth: 300
+            Layout.preferredWidth: 340
             accentColor: Theme.deckBAccent
             group: "[Channel2]"
             label: "DECK B"

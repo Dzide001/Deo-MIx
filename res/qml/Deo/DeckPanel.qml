@@ -6,8 +6,9 @@ import "." as Deo
 import ".." as Skin
 import "../Theme"
 
-// Milestone 1 deck: jog wheel + VINYL/SLIP toggles + transport row.
-// Two instances of this, mirrored left/right, make up the M1 view.
+// Deck shell: jog wheel + pitch fader (M2), VINYL/SLIP toggles, loop
+// section (M2), and transport row. Two instances of this, mirrored
+// left/right, make up the deck view.
 Item {
     id: root
 
@@ -18,7 +19,7 @@ Item {
 
     readonly property bool trackLoaded: trackLoadedControl.value > 0
 
-    implicitWidth: 260
+    implicitWidth: 320
     implicitHeight: content.implicitHeight
 
     Mixxx.ControlProxy {
@@ -72,13 +73,22 @@ Item {
                 text: root.trackLoaded ? "" : "No track loaded — drop a file here"
             }
         }
-        Deo.JogWheel {
-            id: jogWheel
-
+        RowLayout {
             Layout.alignment: Qt.AlignHCenter
-            accentColor: root.accentColor
-            group: root.group
-            vinylMode: vinylToggle.checked
+            spacing: 12
+
+            Deo.JogWheel {
+                id: jogWheel
+
+                accentColor: root.accentColor
+                group: root.group
+                vinylMode: vinylToggle.checked
+            }
+            Deo.PitchFader {
+                Layout.fillHeight: true
+                accentColor: root.accentColor
+                group: root.group
+            }
         }
         RowLayout {
             Layout.fillWidth: true
@@ -101,6 +111,11 @@ Item {
                 text: "Slip"
                 toggleable: true
             }
+        }
+        Deo.LoopSection {
+            Layout.fillWidth: true
+            accentColor: root.accentColor
+            group: root.group
         }
         Deo.TransportRow {
             Layout.fillWidth: true
