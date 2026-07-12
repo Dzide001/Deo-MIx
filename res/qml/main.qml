@@ -30,6 +30,22 @@ ApplicationWindow {
         }
     }
 
+    // Not part of the M1 spec's UI scope, but needed so a fresh install can
+    // reach Sound Hardware preferences (no audio output device is selected
+    // by default) — otherwise CUE/Play/SYNC "work" but nothing is audible
+    // and there's no way to fix that from this stripped-down view.
+    Button {
+        anchors.right: parent.right
+        anchors.top: parent.top
+        anchors.margins: 12
+        text: "⚙ Preferences"
+        z: 10
+
+        onClicked: {
+            Mixxx.PreferencesDialog.show();
+        }
+    }
+
     RowLayout {
         anchors.centerIn: parent
         spacing: 48
