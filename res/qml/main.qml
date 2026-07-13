@@ -13,18 +13,9 @@ import "Theme"
 ApplicationWindow {
     id: root
 
-    // M7: no spatial spec was provided for the library/browser, so it's a
-    // toggleable panel docked at the bottom rather than squeezed into the
-    // already-full deck+mixer layout -- growing the window by exactly the
-    // panel's own height when opened, so the deck/mixer/waveform rows above
-    // it render identically to before regardless of toggle state.
-    property bool libraryOpen: false
-    readonly property int libraryPanelHeight: 340
-    readonly property int collapsedHeight: 760
-
     color: Theme.backgroundColor
-    height: collapsedHeight
-    minimumHeight: 620
+    height: 1100
+    minimumHeight: 700
     minimumWidth: 1300
     visible: true
     visibility: Mixxx.Config.configStartInFullscreenKey ? Window.FullScreen : Window.Windowed
@@ -54,36 +45,18 @@ ApplicationWindow {
             Mixxx.PreferencesDialog.show();
         }
     }
-    // M7: Search/Tracks/Playlists/Crates/Computer sidebar + track table,
-    // toggled rather than always-on since there's no room for a
-    // permanently-docked library alongside the existing deck/mixer layout.
-    Button {
-        anchors.right: parent.right
-        anchors.top: parent.top
-        anchors.margins: 12
-        anchors.rightMargin: 132
-        text: root.libraryOpen ? "📁 Hide Library" : "📁 Library"
-        z: 10
-
-        onClicked: {
-            root.libraryOpen = !root.libraryOpen;
-            root.height = root.libraryOpen ? (root.collapsedHeight + root.libraryPanelHeight) : root.collapsedHeight;
-        }
-    }
 
     ColumnLayout {
         anchors.fill: parent
         anchors.margins: 12
         spacing: 12
 
-        // M6: scrolling waveform spans the full window width above the
-        // deck section, matching Deo Pro dj_layout_spec.json's
-        // waveform_overview_section (a window-level row, 14% of window
-        // height, sibling of deck_section — not nested inside each deck's
-        // own column). Per the VirtualDJ-style reference screenshot, the
-        // two decks' scrolling lanes are STACKED (Deck A on top, Deck B
-        // below), each spanning the full window width, rather than placed
-        // side by side in half-width columns.
+        // Window-level vertical stack, matching Deo Pro dj_layout_spec.json's
+        // root children: waveform_overview_section (14%), deck_section
+        // (32%), browser_section (51%) — the spec's own top_bar (3%) isn't
+        // built (the Preferences button substitutes for it), so these three
+        // percentages are applied directly against the window height rather
+        // than renormalized.
         ColumnLayout {
             Layout.fillWidth: true
             Layout.preferredHeight: Math.max(110, root.height * 0.14)
@@ -104,24 +77,40 @@ ApplicationWindow {
             }
         }
         RowLayout {
+            id: deckMixerRow
+
             Layout.alignment: Qt.AlignHCenter
-            Layout.fillHeight: true
+            Layout.fillWidth: true
+            Layout.preferredHeight: Math.max(300, root.height * 0.32)
+            Layout.minimumHeight: 300
             spacing: 24
 
+            // deck_A / mixer_module / deck_B are 39% / 22% / 39% of
+            // deck_section's width in the spec -- previously the mixer used
+            // a fixed 400px, which grew to a disproportionate share of the
+            // row (up to ~30%+) as the window narrowed toward its minimum
+            // width, since the decks (percentage-flexed internally) shrank
+            // faster than the mixer's fixed floor.
             Deo.DeckPanel {
+                Layout.fillHeight: true
+                Layout.minimumWidth: 480
+                Layout.preferredWidth: deckMixerRow.width * 0.39
                 accentColor: Theme.deckAAccent
                 effectUnitNumber: 1
                 group: "[Channel1]"
                 label: "DECK A"
             }
             Deo.MixerTabs {
-                Layout.preferredWidth: 400
+                Layout.fillHeight: true
                 Layout.minimumWidth: 380
-                Layout.preferredHeight: 420
+                Layout.preferredWidth: deckMixerRow.width * 0.22
                 accentColorA: Theme.deckAAccent
                 accentColorB: Theme.deckBAccent
             }
             Deo.DeckPanel {
+                Layout.fillHeight: true
+                Layout.minimumWidth: 480
+                Layout.preferredWidth: deckMixerRow.width * 0.39
                 accentColor: Theme.deckBAccent
                 effectUnitNumber: 2
                 group: "[Channel2]"
@@ -129,11 +118,15 @@ ApplicationWindow {
                 mirrored: true
             }
         }
+        // M7: browser_section is a permanent, always-visible window-level
+        // row in the spec (51% of window height, sibling of deck_section),
+        // not a toggleable overlay -- it was built as a toggle in the first
+        // pass without checking this file, which was wrong.
         Library {
             Layout.fillWidth: true
-            Layout.preferredHeight: root.libraryOpen ? root.libraryPanelHeight : 0
+            Layout.preferredHeight: Math.max(250, root.height * 0.51)
+            Layout.minimumHeight: 250
             clip: true
-            visible: root.libraryOpen
         }
     }
 }
