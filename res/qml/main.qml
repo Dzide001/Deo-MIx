@@ -58,8 +58,6 @@ ApplicationWindow {
     }
 
     ColumnLayout {
-        id: mainColumn
-
         anchors.fill: parent
         anchors.margins: 12
         spacing: 12
@@ -92,35 +90,36 @@ ApplicationWindow {
         RowLayout {
             id: deckMixerRow
 
-            // Explicit, NOT implicit: deckMixerRow.width must come from
-            // mainColumn (an ancestor with an externally-anchored width),
-            // never be left for Qt to compute from its own children's
-            // preferred widths -- the children below read deckMixerRow.width
-            // to compute THEIR OWN preferredWidth, and if deckMixerRow's own
-            // width were only implicit (fillWidth with no explicit
-            // preferredWidth), that would be a genuine circular binding:
-            // sizing deckMixerRow requires the children's hints, which
-            // require deckMixerRow's width, which isn't known yet. Qt Quick
-            // Layouts detects exactly this pattern ("recursive rearrange,
-            // aborting after two iterations") and settles on an unreliable
-            // value instead of erroring, which is what was inflating Deck
-            // B's width past the visible window edge.
             Layout.fillWidth: true
             Layout.preferredHeight: Math.max(300, root.height * 0.32)
-            Layout.preferredWidth: mainColumn.width
             Layout.minimumHeight: 300
             spacing: 24
 
             // deck_A / mixer_module / deck_B are 39% / 22% / 39% of
-            // deck_section's width in the spec -- previously the mixer used
-            // a fixed 400px, which grew to a disproportionate share of the
-            // row (up to ~30%+) as the window narrowed toward its minimum
-            // width, since the decks (percentage-flexed internally) shrank
-            // faster than the mixer's fixed floor.
+            // deck_section's width in the spec. Deliberately NOT computed
+            // as `deckMixerRow.width * 0.39` -- a child reading its own
+            // parent RowLayout's width is a circular binding (the parent's
+            // width can't be resolved without the children's hints, which
+            // need the parent's width), which Qt Quick Layouts detects
+            // ("recursive rearrange, aborting after two iterations") and
+            // resolves to an unreliable value instead of erroring. Worse,
+            // even once that's made non-circular, fillWidth children don't
+            // shrink below their preferredWidth just because a sibling
+            // needs more room -- Qt Quick Layouts distributes space to
+            // fillWidth items, it doesn't renegotiate their ratio, so a
+            // literal "39% of current width" value doesn't actually shrink
+            // this deck when the mixer or the other deck needs to grow.
+            // Plain preferredWidth *weights* (chosen to match 39/22/39 at a
+            // representative ~1600px row width) sidestep both problems:
+            // Qt Quick Layouts' own fillWidth algorithm distributes actual
+            // available space using these as relative weights, so the
+            // three panels always sum to exactly the row's width with no
+            // overflow, at roughly the spec's ratio.
             Deo.DeckPanel {
                 Layout.fillHeight: true
+                Layout.fillWidth: true
                 Layout.minimumWidth: 400
-                Layout.preferredWidth: deckMixerRow.width * 0.39
+                Layout.preferredWidth: 624
                 accentColor: Theme.deckAAccent
                 effectUnitNumber: 1
                 group: "[Channel1]"
@@ -128,20 +127,19 @@ ApplicationWindow {
             }
             Deo.MixerTabs {
                 Layout.fillHeight: true
+                Layout.fillWidth: true
                 // >= AudioMixerPanel's own internal minimum sum (90+180+90
-                // EQ/center/EQ = 360) and MasterPanel's (90+200+90 = 380) --
-                // 320 was below both, so the mixer's real content painted
-                // past its allocated slot and visually overlapped Deck B
-                // rather than actually being that narrow.
+                // EQ/center/EQ = 360) and MasterPanel's (90+200+90 = 380).
                 Layout.minimumWidth: 400
-                Layout.preferredWidth: deckMixerRow.width * 0.22
+                Layout.preferredWidth: 352
                 accentColorA: Theme.deckAAccent
                 accentColorB: Theme.deckBAccent
             }
             Deo.DeckPanel {
                 Layout.fillHeight: true
+                Layout.fillWidth: true
                 Layout.minimumWidth: 400
-                Layout.preferredWidth: deckMixerRow.width * 0.39
+                Layout.preferredWidth: 624
                 accentColor: Theme.deckBAccent
                 effectUnitNumber: 2
                 group: "[Channel2]"

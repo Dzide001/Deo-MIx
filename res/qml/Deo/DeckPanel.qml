@@ -103,17 +103,8 @@ Item {
         RowLayout {
             id: body
 
-            // Explicit, NOT implicit: see the identical note on
-            // deckMixerRow in main.qml. body.width must come from root (an
-            // ancestor whose width is set externally, by main.qml's
-            // Layout.preferredWidth on this DeckPanel instance), never be
-            // left for Qt to compute from its own children -- the FX/Loop
-            // column below reads body.width to compute its own
-            // preferredWidth, which is a circular binding if body's width
-            // is only implicit.
             Layout.fillWidth: true
             Layout.fillHeight: true
-            Layout.preferredWidth: root.width
 
             LayoutMirroring.enabled: root.mirrored
             LayoutMirroring.childrenInherit: true
@@ -125,11 +116,16 @@ Item {
             // bottom_row halves use the same split, which is why one
             // full-height two-column body (FX+Loop stacked left,
             // jog+pitch+Transport stacked right) is equivalent to the
-            // spec's two separate same-split rows.
+            // spec's two separate same-split rows. Deliberately a plain
+            // preferredWidth *weight* (matching 46/54 at a representative
+            // ~624px deck width), not `body.width * 0.46` -- see the note
+            // on deckMixerRow in main.qml for why that pattern is both
+            // circular and doesn't actually shrink to fit.
             ColumnLayout {
-                Layout.preferredWidth: body.width * 0.46
-                Layout.minimumWidth: 150
                 Layout.fillHeight: true
+                Layout.fillWidth: true
+                Layout.minimumWidth: 150
+                Layout.preferredWidth: 287
                 spacing: 8
 
                 Deo.FXRack {
@@ -149,30 +145,25 @@ Item {
             }
             // Right column: jog wheel/pitch fader + transport row.
             ColumnLayout {
-                id: rightColumn
-
-                Layout.fillWidth: true
                 Layout.fillHeight: true
-                Layout.preferredWidth: body.width * 0.54
+                Layout.fillWidth: true
+                Layout.preferredWidth: 337
                 spacing: 8
 
                 RowLayout {
                     id: jogPitchRow
 
-                    Layout.fillWidth: true
                     Layout.fillHeight: true
-                    Layout.preferredWidth: rightColumn.width
+                    Layout.fillWidth: true
                     spacing: 4
 
                     // deckA_jogwheel_area / deckA_pitch_fader_area are
-                    // 68%/32% of this row's width. Both were previously
-                    // fixed-pixel (jog wheel implicitly 160px, pitch fader
-                    // 75px) rather than scaling with the deck's actual
-                    // width, leaving most of the allocated space empty on
-                    // any deck panel bigger than that fixed size.
+                    // 68%/32% of this row's width -- same fixed-weight
+                    // pattern as above, not `jogPitchRow.width * 0.68`.
                     ColumnLayout {
                         Layout.fillHeight: true
-                        Layout.preferredWidth: jogPitchRow.width * 0.68
+                        Layout.fillWidth: true
+                        Layout.preferredWidth: 229
                         spacing: 4
 
                         // VINYL/SLIP row above the jog wheel, matching the
@@ -231,7 +222,8 @@ Item {
                     }
                     Deo.PitchFader {
                         Layout.fillHeight: true
-                        Layout.preferredWidth: jogPitchRow.width * 0.32
+                        Layout.fillWidth: true
+                        Layout.preferredWidth: 108
                         accentColor: root.accentColor
                         group: root.group
                     }
