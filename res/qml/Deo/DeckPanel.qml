@@ -51,6 +51,13 @@ Item {
     ColumnLayout {
         id: layout
 
+        // Defensive containment: if internal content ever needs more room
+        // than this panel was allocated (e.g. a minimum-width mismatch
+        // between here and a child several levels down), clip instead of
+        // visually bleeding into whatever's rendered next to it. Applied
+        // here rather than on root so it doesn't also clip the background
+        // Rectangle's intentional -8 margin bleed above.
+        clip: true
         anchors.fill: parent
         spacing: 8
 

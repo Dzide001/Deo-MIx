@@ -14,18 +14,20 @@ ApplicationWindow {
     id: root
 
     // minimumWidth/minimumHeight must be at least the sum of the deepest
-    // Layout.minimumWidth/Height floors below (deck+mixer row: 400+320+400
-    // + 2*24 spacing = 1168, plus 24 outer margins = 1192; three stacked
+    // Layout.minimumWidth/Height floors below (deck+mixer row: 400+400+400
+    // + 2*24 spacing = 1248, plus 24 outer margins = 1272; three stacked
     // rows: 110+300+250 + 2*12 spacing + 24 margins = 708) -- Qt Quick
     // Layouts does not shrink children below their own minimums, it lets
-    // them overflow past the allocated space instead. Also starts
-    // Maximized rather than a fixed 1600x1100 in plain Windowed mode, so
-    // the UI always fills whatever screen space is actually available
-    // instead of a size that can exceed it.
+    // them overflow past the allocated space (or, for a component whose
+    // OWN declared minimum was set too low relative to its real internal
+    // content, paint past its allocated slot into a neighbor) instead.
+    // Also starts Maximized rather than a fixed 1600x1100 in plain
+    // Windowed mode, so the UI always fills whatever screen space is
+    // actually available instead of a size that can exceed it.
     color: Theme.backgroundColor
     height: 1100
     minimumHeight: 720
-    minimumWidth: 1220
+    minimumWidth: 1300
     visible: true
     visibility: Mixxx.Config.configStartInFullscreenKey ? Window.FullScreen : Window.Maximized
     width: 1600
@@ -126,7 +128,12 @@ ApplicationWindow {
             }
             Deo.MixerTabs {
                 Layout.fillHeight: true
-                Layout.minimumWidth: 320
+                // >= AudioMixerPanel's own internal minimum sum (90+180+90
+                // EQ/center/EQ = 360) and MasterPanel's (90+200+90 = 380) --
+                // 320 was below both, so the mixer's real content painted
+                // past its allocated slot and visually overlapped Deck B
+                // rather than actually being that narrow.
+                Layout.minimumWidth: 400
                 Layout.preferredWidth: deckMixerRow.width * 0.22
                 accentColorA: Theme.deckAAccent
                 accentColorB: Theme.deckBAccent

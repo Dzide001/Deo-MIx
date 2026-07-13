@@ -19,6 +19,12 @@ import ".." as Skin
 ColumnLayout {
     id: root
 
+    // Defensive containment: AudioMixerPanel/MasterPanel's own internal
+    // minimums (EQ/center/EQ columns) can exceed whatever slot this gets
+    // allocated if that mismatch ever recurs -- clip instead of visually
+    // bleeding into the deck panel rendered next to it.
+    clip: true
+
     required property color accentColorA
     required property color accentColorB
 
