@@ -138,10 +138,21 @@ Item {
                 spacing: 8
 
                 RowLayout {
-                    Layout.alignment: Qt.AlignHCenter
+                    id: jogPitchRow
+
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
                     spacing: 4
 
+                    // deckA_jogwheel_area / deckA_pitch_fader_area are
+                    // 68%/32% of this row's width. Both were previously
+                    // fixed-pixel (jog wheel implicitly 160px, pitch fader
+                    // 75px) rather than scaling with the deck's actual
+                    // width, leaving most of the allocated space empty on
+                    // any deck panel bigger than that fixed size.
                     ColumnLayout {
+                        Layout.fillHeight: true
+                        Layout.preferredWidth: jogPitchRow.width * 0.68
                         spacing: 4
 
                         // VINYL/SLIP row above the jog wheel, matching the
@@ -172,8 +183,9 @@ Item {
                             }
                         }
                         Item {
-                            implicitWidth: jogWheel.implicitWidth
-                            implicitHeight: jogWheel.implicitHeight
+                            Layout.alignment: Qt.AlignHCenter
+                            Layout.fillWidth: true
+                            Layout.fillHeight: true
 
                             Deo.JogWheel {
                                 id: jogWheel
@@ -198,13 +210,8 @@ Item {
                         }
                     }
                     Deo.PitchFader {
-                        // 68/32 jogwheel/pitch-fader split per
-                        // deckA_jogwheel_area vs deckA_pitch_fader_area in
-                        // Deo Pro dj_layout_spec.json: jog wheel is 160px,
-                        // so pitch fader column should be ~75px (was 34,
-                        // noticeably narrower than the spec's ratio).
                         Layout.fillHeight: true
-                        Layout.preferredWidth: 75
+                        Layout.preferredWidth: jogPitchRow.width * 0.32
                         accentColor: root.accentColor
                         group: root.group
                     }
@@ -213,9 +220,6 @@ Item {
                     Layout.fillWidth: true
                     accentColor: root.accentColor
                     group: root.group
-                }
-                Item {
-                    Layout.fillHeight: true
                 }
             }
         }

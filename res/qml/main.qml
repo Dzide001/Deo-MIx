@@ -13,12 +13,23 @@ import "Theme"
 ApplicationWindow {
     id: root
 
+    // minimumWidth/minimumHeight must be at least the sum of the deepest
+    // Layout.minimumWidth/Height floors below (deck+mixer row: 480+380+480
+    // + 2*24 spacing = 1412, plus 24 outer margins = 1436; three stacked
+    // rows: 110+300+250 + 2*12 spacing + 24 margins = 708) -- Qt Quick
+    // Layouts does not shrink children below their own minimums, it lets
+    // them overflow past the allocated space instead, which is what was
+    // cutting off the right edge and Deck A when the window rendered
+    // smaller than 1300x700. Also starts Maximized rather than a fixed
+    // 1600x1100 in plain Windowed mode, so the UI always fills whatever
+    // screen space is actually available instead of a size that can
+    // exceed it.
     color: Theme.backgroundColor
     height: 1100
-    minimumHeight: 700
-    minimumWidth: 1300
+    minimumHeight: 740
+    minimumWidth: 1450
     visible: true
-    visibility: Mixxx.Config.configStartInFullscreenKey ? Window.FullScreen : Window.Windowed
+    visibility: Mixxx.Config.configStartInFullscreenKey ? Window.FullScreen : Window.Maximized
     width: 1600
 
     Mixxx.ControlProxy {

@@ -136,6 +136,11 @@ ColumnLayout {
             }
         }
     }
+    // deckA_pitch_fader_area's spec composition is exactly these three
+    // children (readout / fader / minus_plus) — a keylock ("KEY") and
+    // range ("RNG") button pair used to live here too, which pushed this
+    // column's content past its allocated height and cut it off at the
+    // bottom (not in the spec, so removed rather than resized).
     RowLayout {
         Layout.fillWidth: true
         spacing: 2
@@ -160,29 +165,5 @@ ColumnLayout {
             opacity: enabled ? 1.0 : 0.4
             text: "+"
         }
-    }
-    // Keylock and pitch-range switching aren't visible in the reference
-    // layout (their placement is an open decision per the spec), so these
-    // stay functional but visually secondary rather than matching pixel
-    // position to anything in the screenshot.
-    Skin.ControlButton {
-        Layout.fillWidth: true
-        activeColor: root.accentColor
-        enabled: root.trackLoaded
-        group: root.group
-        implicitHeight: 18
-        key: "keylock"
-        opacity: enabled ? 1.0 : 0.4
-        text: "KEY"
-        toggleable: true
-    }
-    Skin.RangeButton {
-        Layout.fillWidth: true
-        activeColor: root.accentColor
-        enabled: root.trackLoaded
-        group: root.group
-        implicitHeight: 18
-        opacity: enabled ? 1.0 : 0.4
-        text: "RNG"
     }
 }
