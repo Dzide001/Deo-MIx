@@ -143,12 +143,18 @@ Item {
                 // alongside the loop row in the spec (a sibling of
                 // deckA_loop_row within deckA_loop_pads_combo) as closely
                 // as this deck's simpler stacked-column structure allows.
+                // A compact fixed height (not fillHeight) matching the
+                // reference's proportions -- pads_block is a modest ~72%
+                // of a 16%-tall bottom_row in the spec, not a block that
+                // stretches to fill whatever space is left over.
                 Deo.StemPads {
-                    Layout.fillHeight: true
                     Layout.fillWidth: true
-                    Layout.minimumHeight: 60
+                    Layout.preferredHeight: 100
                     accentColor: root.accentColor
                     group: root.group
+                }
+                Item {
+                    Layout.fillHeight: true
                 }
             }
             // Right column: jog wheel/pitch fader + transport row.
