@@ -14,20 +14,18 @@ ApplicationWindow {
     id: root
 
     // minimumWidth/minimumHeight must be at least the sum of the deepest
-    // Layout.minimumWidth/Height floors below (deck+mixer row: 480+380+480
-    // + 2*24 spacing = 1412, plus 24 outer margins = 1436; three stacked
+    // Layout.minimumWidth/Height floors below (deck+mixer row: 400+320+400
+    // + 2*24 spacing = 1168, plus 24 outer margins = 1192; three stacked
     // rows: 110+300+250 + 2*12 spacing + 24 margins = 708) -- Qt Quick
     // Layouts does not shrink children below their own minimums, it lets
-    // them overflow past the allocated space instead, which is what was
-    // cutting off the right edge and Deck A when the window rendered
-    // smaller than 1300x700. Also starts Maximized rather than a fixed
-    // 1600x1100 in plain Windowed mode, so the UI always fills whatever
-    // screen space is actually available instead of a size that can
-    // exceed it.
+    // them overflow past the allocated space instead. Also starts
+    // Maximized rather than a fixed 1600x1100 in plain Windowed mode, so
+    // the UI always fills whatever screen space is actually available
+    // instead of a size that can exceed it.
     color: Theme.backgroundColor
     height: 1100
-    minimumHeight: 740
-    minimumWidth: 1450
+    minimumHeight: 720
+    minimumWidth: 1220
     visible: true
     visibility: Mixxx.Config.configStartInFullscreenKey ? Window.FullScreen : Window.Maximized
     width: 1600
@@ -58,6 +56,8 @@ ApplicationWindow {
     }
 
     ColumnLayout {
+        id: mainColumn
+
         anchors.fill: parent
         anchors.margins: 12
         spacing: 12
@@ -90,9 +90,22 @@ ApplicationWindow {
         RowLayout {
             id: deckMixerRow
 
-            Layout.alignment: Qt.AlignHCenter
+            // Explicit, NOT implicit: deckMixerRow.width must come from
+            // mainColumn (an ancestor with an externally-anchored width),
+            // never be left for Qt to compute from its own children's
+            // preferred widths -- the children below read deckMixerRow.width
+            // to compute THEIR OWN preferredWidth, and if deckMixerRow's own
+            // width were only implicit (fillWidth with no explicit
+            // preferredWidth), that would be a genuine circular binding:
+            // sizing deckMixerRow requires the children's hints, which
+            // require deckMixerRow's width, which isn't known yet. Qt Quick
+            // Layouts detects exactly this pattern ("recursive rearrange,
+            // aborting after two iterations") and settles on an unreliable
+            // value instead of erroring, which is what was inflating Deck
+            // B's width past the visible window edge.
             Layout.fillWidth: true
             Layout.preferredHeight: Math.max(300, root.height * 0.32)
+            Layout.preferredWidth: mainColumn.width
             Layout.minimumHeight: 300
             spacing: 24
 
@@ -104,7 +117,7 @@ ApplicationWindow {
             // faster than the mixer's fixed floor.
             Deo.DeckPanel {
                 Layout.fillHeight: true
-                Layout.minimumWidth: 480
+                Layout.minimumWidth: 400
                 Layout.preferredWidth: deckMixerRow.width * 0.39
                 accentColor: Theme.deckAAccent
                 effectUnitNumber: 1
@@ -113,14 +126,14 @@ ApplicationWindow {
             }
             Deo.MixerTabs {
                 Layout.fillHeight: true
-                Layout.minimumWidth: 380
+                Layout.minimumWidth: 320
                 Layout.preferredWidth: deckMixerRow.width * 0.22
                 accentColorA: Theme.deckAAccent
                 accentColorB: Theme.deckBAccent
             }
             Deo.DeckPanel {
                 Layout.fillHeight: true
-                Layout.minimumWidth: 480
+                Layout.minimumWidth: 400
                 Layout.preferredWidth: deckMixerRow.width * 0.39
                 accentColor: Theme.deckBAccent
                 effectUnitNumber: 2

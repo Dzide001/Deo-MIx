@@ -96,8 +96,17 @@ Item {
         RowLayout {
             id: body
 
+            // Explicit, NOT implicit: see the identical note on
+            // deckMixerRow in main.qml. body.width must come from root (an
+            // ancestor whose width is set externally, by main.qml's
+            // Layout.preferredWidth on this DeckPanel instance), never be
+            // left for Qt to compute from its own children -- the FX/Loop
+            // column below reads body.width to compute its own
+            // preferredWidth, which is a circular binding if body's width
+            // is only implicit.
             Layout.fillWidth: true
             Layout.fillHeight: true
+            Layout.preferredWidth: root.width
 
             LayoutMirroring.enabled: root.mirrored
             LayoutMirroring.childrenInherit: true
@@ -133,8 +142,11 @@ Item {
             }
             // Right column: jog wheel/pitch fader + transport row.
             ColumnLayout {
+                id: rightColumn
+
                 Layout.fillWidth: true
                 Layout.fillHeight: true
+                Layout.preferredWidth: body.width * 0.54
                 spacing: 8
 
                 RowLayout {
@@ -142,6 +154,7 @@ Item {
 
                     Layout.fillWidth: true
                     Layout.fillHeight: true
+                    Layout.preferredWidth: rightColumn.width
                     spacing: 4
 
                     // deckA_jogwheel_area / deckA_pitch_fader_area are
