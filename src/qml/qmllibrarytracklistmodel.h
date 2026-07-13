@@ -75,6 +75,16 @@ class QmlLibraryTrackListModel : public QIdentityProxyModel {
             Qt::Orientation orientation,
             int role = Qt::DisplayRole) const override;
     Q_INVOKABLE void sort(int column, Qt::SortOrder order) override;
+    // M7: basic text search over whichever collection this model currently
+    // wraps (whole library, a crate, a playlist, a browsed folder) -- scopes
+    // to that collection rather than the whole library, matching stock
+    // Mixxx's search-within-current-view behavior.
+    Q_INVOKABLE void search(const QString& text);
+    Q_INVOKABLE QString currentSearch() const;
+    // M7 context-menu actions: soft-hide (recoverable, distinct from Purge)
+    // and re-reading tags from the file on disk.
+    Q_INVOKABLE void hideTrack(int row);
+    Q_INVOKABLE void reloadTrackMetadata(int row);
 
   private:
     std::vector<parented_ptr<QmlLibraryTrackListColumn>> m_columns;

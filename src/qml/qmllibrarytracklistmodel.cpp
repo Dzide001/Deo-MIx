@@ -12,9 +12,11 @@
 #include "library/columncache.h"
 #include "moc_qmllibrarytracklistmodel.cpp"
 #include "qml/asyncimageprovider.h"
+#include "qml/qmlconfigproxy.h"
 #include "qml/qmllibrarytracklistcolumn.h"
 #include "qml_owned_ptr.h"
 #include "qmltrackproxy.h"
+#include "sources/soundsourceproxy.h"
 #include "track/track.h"
 #include "util/assert.h"
 #include "util/parented_ptr.h"
@@ -217,6 +219,44 @@ void QmlLibraryTrackListModel::sort(int column, Qt::SortOrder order) {
                     : pColumn->columnIdx(),
             order);
     emit layoutChanged(QList<QPersistentModelIndex>(), QAbstractItemModel::VerticalSortHint);
+}
+
+void QmlLibraryTrackListModel::search(const QString& text) {
+    auto* const pTrackModel = dynamic_cast<TrackModel*>(sourceModel());
+    if (pTrackModel == nullptr) {
+        return;
+    }
+    pTrackModel->search(text);
+}
+
+QString QmlLibraryTrackListModel::currentSearch() const {
+    auto* const pTrackModel = dynamic_cast<TrackModel*>(sourceModel());
+    if (pTrackModel == nullptr) {
+        return {};
+    }
+    return pTrackModel->currentSearch();
+}
+
+void QmlLibraryTrackListModel::hideTrack(int row) {
+    auto* const pTrackModel = dynamic_cast<TrackModel*>(sourceModel());
+    if (pTrackModel == nullptr) {
+        return;
+    }
+    pTrackModel->hideTracks({sourceModel()->index(row, 0)});
+}
+
+void QmlLibraryTrackListModel::reloadTrackMetadata(int row) {
+    auto* const pTrackModel = dynamic_cast<TrackModel*>(sourceModel());
+    if (pTrackModel == nullptr) {
+        return;
+    }
+    TrackPointer pTrack = pTrackModel->getTrack(sourceModel()->index(row, 0));
+    if (!pTrack) {
+        return;
+    }
+    SoundSourceProxy(pTrack).updateTrackFromSource(
+            SoundSourceProxy::UpdateTrackFromSourceMode::Always,
+            SyncTrackMetadataParams::readFromUserSettings(*QmlConfigProxy::get()));
 }
 
 } // namespace qml

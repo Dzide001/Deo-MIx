@@ -57,5 +57,38 @@ QmlLibraryAllTrackSource::QmlLibraryAllTrackSource(
             &QmlLibrarySource::slotShowTrackModel);
 }
 
+QmlLibraryPlaylistsSource::QmlLibraryPlaylistsSource(
+        QObject* parent, const QList<QmlLibraryTrackListColumn*>& columns)
+        : QmlLibrarySource(parent, columns),
+          m_pFeature(std::make_unique<PlaylistFeature>(
+                  QmlLibraryProxy::get(), QmlConfigProxy::get())) {
+    connect(m_pFeature.get(),
+            &LibraryFeature::showTrackModel,
+            this,
+            &QmlLibrarySource::slotShowTrackModel);
+}
+
+QmlLibraryCratesSource::QmlLibraryCratesSource(
+        QObject* parent, const QList<QmlLibraryTrackListColumn*>& columns)
+        : QmlLibrarySource(parent, columns),
+          m_pFeature(std::make_unique<CrateFeature>(
+                  QmlLibraryProxy::get(), QmlConfigProxy::get())) {
+    connect(m_pFeature.get(),
+            &LibraryFeature::showTrackModel,
+            this,
+            &QmlLibrarySource::slotShowTrackModel);
+}
+
+QmlLibraryBrowseSource::QmlLibraryBrowseSource(
+        QObject* parent, const QList<QmlLibraryTrackListColumn*>& columns)
+        : QmlLibrarySource(parent, columns),
+          m_pFeature(std::make_unique<BrowseFeature>(
+                  QmlLibraryProxy::get(), QmlConfigProxy::get(), nullptr)) {
+    connect(m_pFeature.get(),
+            &LibraryFeature::showTrackModel,
+            this,
+            &QmlLibrarySource::slotShowTrackModel);
+}
+
 } // namespace qml
 } // namespace mixxx

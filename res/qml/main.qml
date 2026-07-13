@@ -13,8 +13,17 @@ import "Theme"
 ApplicationWindow {
     id: root
 
+    // M7: no spatial spec was provided for the library/browser, so it's a
+    // toggleable panel docked at the bottom rather than squeezed into the
+    // already-full deck+mixer layout -- growing the window by exactly the
+    // panel's own height when opened, so the deck/mixer/waveform rows above
+    // it render identically to before regardless of toggle state.
+    property bool libraryOpen: false
+    readonly property int libraryPanelHeight: 340
+    readonly property int collapsedHeight: 760
+
     color: Theme.backgroundColor
-    height: 760
+    height: collapsedHeight
     minimumHeight: 620
     minimumWidth: 1300
     visible: true
@@ -43,6 +52,22 @@ ApplicationWindow {
 
         onClicked: {
             Mixxx.PreferencesDialog.show();
+        }
+    }
+    // M7: Search/Tracks/Playlists/Crates/Computer sidebar + track table,
+    // toggled rather than always-on since there's no room for a
+    // permanently-docked library alongside the existing deck/mixer layout.
+    Button {
+        anchors.right: parent.right
+        anchors.top: parent.top
+        anchors.margins: 12
+        anchors.rightMargin: 132
+        text: root.libraryOpen ? "📁 Hide Library" : "📁 Library"
+        z: 10
+
+        onClicked: {
+            root.libraryOpen = !root.libraryOpen;
+            root.height = root.libraryOpen ? (root.collapsedHeight + root.libraryPanelHeight) : root.collapsedHeight;
         }
     }
 
@@ -103,6 +128,12 @@ ApplicationWindow {
                 label: "DECK B"
                 mirrored: true
             }
+        }
+        Library {
+            Layout.fillWidth: true
+            Layout.preferredHeight: root.libraryOpen ? root.libraryPanelHeight : 0
+            clip: true
+            visible: root.libraryOpen
         }
     }
 }

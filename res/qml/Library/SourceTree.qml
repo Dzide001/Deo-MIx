@@ -162,6 +162,23 @@ Mixxx.LibrarySourceTree {
         columns: root.defaultColumns
         label: qsTr("All...")
     }
+    // M7: Playlists/Crates/Browse sidebar sections, following the same
+    // pattern as LibraryAllTrackSource above -- each wraps the real
+    // PlaylistFeature/CrateFeature/BrowseFeature C++ class, so clicking
+    // into an individual playlist/crate/folder shows that collection's
+    // track list, not just a flat "everything" view.
+    Mixxx.LibraryPlaylistsSource {
+        columns: root.defaultColumns
+        label: qsTr("Playlists")
+    }
+    Mixxx.LibraryCratesSource {
+        columns: root.defaultColumns
+        label: qsTr("Crates")
+    }
+    Mixxx.LibraryBrowseSource {
+        columns: root.defaultColumns
+        label: qsTr("Computer")
+    }
 
     component DefaultDelegate: LibraryComponent.Cell {
         id: cell

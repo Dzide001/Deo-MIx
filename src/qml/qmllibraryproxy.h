@@ -2,6 +2,7 @@
 #include <QObject>
 #include <QQmlEngine>
 #include <QString>
+#include <QVariantList>
 #include <Qt>
 #include <memory>
 
@@ -60,6 +61,18 @@ class QmlLibraryProxy : public QObject {
     Q_INVOKABLE void cleanupDeckHotcuePopup(
             mixxx::qml::QmlTrackProxy* track,
             int hotcueNumber);
+
+    // M7 context menu: "Add to Playlist/Crate" needs an enumeration of
+    // existing playlists/crates, plus a way to add a track and to create a
+    // new one from a typed name. Playlist ids are plain `int` in
+    // PlaylistDAO; crate ids are `int`-convertible via CrateId's QVariant
+    // round-trip (there's no lighter-weight accessor upstream).
+    Q_INVOKABLE QVariantList playlists() const;
+    Q_INVOKABLE QVariantList crates() const;
+    Q_INVOKABLE bool addTrackToPlaylist(int playlistId, mixxx::qml::QmlTrackProxy* track) const;
+    Q_INVOKABLE bool addTrackToCrate(int crateId, mixxx::qml::QmlTrackProxy* track) const;
+    Q_INVOKABLE int createPlaylist(const QString& name) const;
+    Q_INVOKABLE int createCrate(const QString& name) const;
 
   private:
     static inline std::shared_ptr<Library> s_pLibrary;

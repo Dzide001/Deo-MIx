@@ -64,6 +64,7 @@ QtObject {
     property color libraryPanelSplitterBackground: "#1e1e1e"
     property color libraryPanelSplitterHandle: "#5f5f5f"
     property color libraryPanelSplitterHandleActive: "#7a7a7a"
+    property color loadedTrackRowColor: "#2A5A6B"
     property color lightGray: "#747474"
     property color lightGray2: "#b0b0b0"
     property color lightGray3: "#939393"

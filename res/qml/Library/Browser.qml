@@ -126,7 +126,13 @@ Rectangle {
                                     Image {
                                         height: 25
                                         source: icon
-                                        visible: depth == 0 && icon
+                                        // M7: Playlists/Crates/Computer reuse the real
+                                        // PlaylistFeature/CrateFeature/BrowseFeature, whose
+                                        // iconName() returns legacy resource-icon tokens
+                                        // (e.g. "playlist") rather than a path this Image can
+                                        // resolve -- fail closed instead of showing a broken
+                                        // image glyph.
+                                        visible: depth == 0 && icon && status !== Image.Error
                                         width: 25
                                     }
                                 }

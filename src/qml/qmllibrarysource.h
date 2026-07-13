@@ -112,5 +112,55 @@ class QmlLibraryAllTrackSource : public QmlLibrarySource {
     std::unique_ptr<AllTrackLibraryFeature> m_pLibraryFeature;
 };
 
+// M7: Playlists/Crates/Browse sidebar sections, following the exact same
+// adapter pattern as QmlLibraryAllTrackSource above, but wrapping the real
+// PlaylistFeature/CrateFeature/BrowseFeature (rather than a hand-rolled
+// LibraryFeature) so the sidebar gets their actual child-item trees
+// (individual playlists/crates/folders), not just a flat track list.
+class QmlLibraryPlaylistsSource : public QmlLibrarySource {
+    Q_OBJECT
+    QML_NAMED_ELEMENT(LibraryPlaylistsSource)
+  public:
+    explicit QmlLibraryPlaylistsSource(QObject* parent = nullptr,
+            const QList<QmlLibraryTrackListColumn*>& columns = {});
+
+    LibraryFeature* internal() override {
+        return m_pFeature.get();
+    }
+
+  private:
+    std::unique_ptr<PlaylistFeature> m_pFeature;
+};
+
+class QmlLibraryCratesSource : public QmlLibrarySource {
+    Q_OBJECT
+    QML_NAMED_ELEMENT(LibraryCratesSource)
+  public:
+    explicit QmlLibraryCratesSource(QObject* parent = nullptr,
+            const QList<QmlLibraryTrackListColumn*>& columns = {});
+
+    LibraryFeature* internal() override {
+        return m_pFeature.get();
+    }
+
+  private:
+    std::unique_ptr<CrateFeature> m_pFeature;
+};
+
+class QmlLibraryBrowseSource : public QmlLibrarySource {
+    Q_OBJECT
+    QML_NAMED_ELEMENT(LibraryBrowseSource)
+  public:
+    explicit QmlLibraryBrowseSource(QObject* parent = nullptr,
+            const QList<QmlLibraryTrackListColumn*>& columns = {});
+
+    LibraryFeature* internal() override {
+        return m_pFeature.get();
+    }
+
+  private:
+    std::unique_ptr<BrowseFeature> m_pFeature;
+};
+
 } // namespace qml
 } // namespace mixxx

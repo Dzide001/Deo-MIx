@@ -16,6 +16,17 @@ Rectangle {
 
     color: Theme.darkGray
 
+    // M7: lets each row detect whether its track is already loaded on a
+    // deck, so the table can highlight it distinctly (acceptance criterion:
+    // "a DJ needs to see at a glance which track from the list is already
+    // playing"). Iterates however many decks are actually configured
+    // rather than hardcoding a deck count.
+    Mixxx.ControlProxy {
+        id: numDecksControl
+
+        group: "[App]"
+        key: "num_decks"
+    }
     LibraryComponent.Control {
         id: libraryControl
 
@@ -36,6 +47,32 @@ Rectangle {
             view.selectionModel.moveSelectionVertical(offset);
         }
     }
+    // M7: search filters whichever collection is currently displayed (whole
+    // library, a crate, a playlist, a browsed folder) in real time, not a
+    // separate global-only search -- it just calls search() on root.model,
+    // which is already scoped to the active sidebar selection.
+    TextField {
+        id: searchField
+
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.top: parent.top
+        anchors.margins: 5
+        placeholderText: qsTr("Search")
+
+        onTextChanged: {
+            if (root.model) {
+                root.model.search(text);
+            }
+        }
+        Connections {
+            function onModelChanged() {
+                searchField.text = root.model ? root.model.currentSearch() : "";
+            }
+
+            target: root
+        }
+    }
     HorizontalHeaderView {
         id: horizontalHeader
 
@@ -45,7 +82,7 @@ Rectangle {
         anchors.left: parent.left
         anchors.margins: 5
         anchors.right: parent.right
-        anchors.top: parent.top
+        anchors.top: searchField.bottom
         syncView: view
 
         delegate: Item {
@@ -246,6 +283,15 @@ Rectangle {
                 property color decoration: item.decoration
                 property var display: item.display
                 property url file_url: item.file_url
+                property bool isLoaded: {
+                    for (let i = 1; i <= numDecksControl.value; i++) {
+                        const player = Mixxx.PlayerManager.getPlayer("[Channel" + i + "]");
+                        if (player && player.isLoaded && player.currentTrack && player.currentTrack.trackLocationUrl.toString() === item.file_url.toString()) {
+                            return true;
+                        }
+                    }
+                    return false;
+                }
                 property int row: item.row
                 property bool selected: item.selected
                 property var tableView: view
@@ -306,5 +352,15 @@ Rectangle {
                 view.forceLayout();
             }
         }
+    }
+    // Distinct empty state (search-no-results vs. genuinely-empty
+    // crate/playlist) rather than just a blank table.
+    Label {
+        anchors.centerIn: view
+        color: Theme.textColor
+        font.family: Theme.fontFamily
+        font.pixelSize: 14
+        text: searchField.text.length > 0 ? qsTr("No tracks match \"%1\"").arg(searchField.text) : qsTr("This collection is empty")
+        visible: view.rows === 0
     }
 }

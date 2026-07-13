@@ -5,8 +5,13 @@
 #include <cmath>
 
 #include "control/controlobject.h"
+#include "library/dao/playlistdao.h"
 #include "library/library.h"
 #include "library/librarytablemodel.h"
+#include "library/trackcollection.h"
+#include "library/trackcollectionmanager.h"
+#include "library/trackset/crate/crate.h"
+#include "library/trackset/crate/cratestorage.h"
 #include "moc_qmllibraryproxy.cpp"
 #include "preferences/colorpalettesettings.h"
 #include "qml/qmlconfigproxy.h"
@@ -252,6 +257,94 @@ void QmlLibraryProxy::cleanupDeckHotcuePopup(
             pCue->getEndPosition().isValid()) {
         pCue->setEndPosition(mixxx::audio::FramePos());
     }
+}
+
+QVariantList QmlLibraryProxy::playlists() const {
+    QVariantList result;
+    VERIFY_OR_DEBUG_ASSERT(s_pLibrary) {
+        return result;
+    }
+    PlaylistDAO& playlistDao =
+            s_pLibrary->trackCollectionManager()->internalCollection()->getPlaylistDAO();
+    const auto playlistPairs = playlistDao.getPlaylists(PlaylistDAO::PLHT_NOT_HIDDEN);
+    for (const auto& pair : playlistPairs) {
+        QVariantMap entry;
+        entry.insert(QStringLiteral("id"), pair.first);
+        entry.insert(QStringLiteral("name"), pair.second);
+        result.append(entry);
+    }
+    return result;
+}
+
+QVariantList QmlLibraryProxy::crates() const {
+    QVariantList result;
+    VERIFY_OR_DEBUG_ASSERT(s_pLibrary) {
+        return result;
+    }
+    const CrateStorage& crateStorage =
+            s_pLibrary->trackCollectionManager()->internalCollection()->crates();
+    CrateSelectResult crateResult = crateStorage.selectCrates();
+    Crate crate;
+    while (crateResult.populateNext(&crate)) {
+        QVariantMap entry;
+        entry.insert(QStringLiteral("id"), crate.getId().toVariant().toInt());
+        entry.insert(QStringLiteral("name"), crate.getName());
+        result.append(entry);
+    }
+    return result;
+}
+
+bool QmlLibraryProxy::addTrackToPlaylist(int playlistId, QmlTrackProxy* track) const {
+    VERIFY_OR_DEBUG_ASSERT(s_pLibrary && track && track->internal()) {
+        return false;
+    }
+    const TrackId trackId = track->internal()->getId();
+    s_pLibrary->trackCollectionManager()->unhideTracks({trackId});
+    PlaylistDAO& playlistDao =
+            s_pLibrary->trackCollectionManager()->internalCollection()->getPlaylistDAO();
+    if (playlistDao.isTrackInPlaylist(trackId, playlistId)) {
+        return false;
+    }
+    return playlistDao.appendTrackToPlaylist(trackId, playlistId);
+}
+
+bool QmlLibraryProxy::addTrackToCrate(int crateId, QmlTrackProxy* track) const {
+    VERIFY_OR_DEBUG_ASSERT(s_pLibrary && track && track->internal()) {
+        return false;
+    }
+    const TrackId trackId = track->internal()->getId();
+    s_pLibrary->trackCollectionManager()->unhideTracks({trackId});
+    return s_pLibrary->trackCollectionManager()->internalCollection()->addCrateTracks(
+            CrateId(QVariant(crateId)), {trackId});
+}
+
+int QmlLibraryProxy::createPlaylist(const QString& name) const {
+    VERIFY_OR_DEBUG_ASSERT(s_pLibrary) {
+        return -1;
+    }
+    PlaylistDAO& playlistDao =
+            s_pLibrary->trackCollectionManager()->internalCollection()->getPlaylistDAO();
+    if (playlistDao.getPlaylistIdFromName(name) != -1) {
+        return -1;
+    }
+    return playlistDao.createPlaylist(name);
+}
+
+int QmlLibraryProxy::createCrate(const QString& name) const {
+    VERIFY_OR_DEBUG_ASSERT(s_pLibrary) {
+        return -1;
+    }
+    TrackCollection* pCollection = s_pLibrary->trackCollectionManager()->internalCollection();
+    if (pCollection->crates().readCrateByName(name, nullptr)) {
+        return -1;
+    }
+    Crate newCrate;
+    newCrate.setName(name);
+    CrateId newCrateId;
+    if (!pCollection->insertCrate(newCrate, &newCrateId)) {
+        return -1;
+    }
+    return newCrateId.toVariant().toInt();
 }
 
 // static
