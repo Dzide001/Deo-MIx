@@ -4783,6 +4783,64 @@ if(SndFile_SUPPORTS_SET_COMPRESSION_LEVEL)
   )
 endif()
 
+# AI Stem Separation -- Stage 1: standalone ONNX Runtime + Eigen validation
+# only (see lib/demucsonnx/, src/stemsep/, and the stage 1 plan doc).
+# Deliberately NOT linked into mixxx-lib / mixxx-qml-lib / mixxx / mixxx-test
+# -- a build break here cannot affect the app. Off by default; only enabled
+# by explicitly pointing both dependency roots at separately-installed
+# copies of Eigen3 and onnxruntime, kept outside MIXXX_VCPKG_ROOT on purpose
+# (this repo has no vcpkg manifest, and neither dependency exists in the
+# prebuilt buildenv bundle). Placed after SndFile (rather than next to the
+# STEM block above) so add_subdirectory(src/stemsep) can link against the
+# already-defined SndFile::sndfile target -- add_subdirectory() processes
+# immediately, not deferred to end-of-file.
+set(
+  AI_STEM_SEPARATION_EIGEN3_ROOT
+  ""
+  CACHE PATH
+  "Path to a separate Eigen3 CMake-config install for AI_STEM_SEPARATION"
+)
+set(
+  AI_STEM_SEPARATION_ONNXRUNTIME_ROOT
+  ""
+  CACHE PATH
+  "Path to a separate onnxruntime CMake-config install for AI_STEM_SEPARATION"
+)
+if(AI_STEM_SEPARATION_EIGEN3_ROOT)
+  set(Eigen3_ROOT "${AI_STEM_SEPARATION_EIGEN3_ROOT}")
+endif()
+if(AI_STEM_SEPARATION_ONNXRUNTIME_ROOT)
+  set(onnxruntime_ROOT "${AI_STEM_SEPARATION_ONNXRUNTIME_ROOT}")
+endif()
+find_package(Eigen3 3.4 CONFIG QUIET)
+find_package(onnxruntime CONFIG QUIET)
+if(onnxruntime_FOUND AND TARGET onnxruntime::onnxruntime)
+  # The official onnxruntime-osx-arm64 release tarball's own CMake config
+  # references an "include/onnxruntime" subdirectory that doesn't actually
+  # exist in the tarball (headers ship flat in "include/") -- a packaging
+  # quirk in the upstream release, not something introduced here. Override
+  # the imported target's include dir to point at the real location.
+  set_target_properties(
+    onnxruntime::onnxruntime
+    PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${AI_STEM_SEPARATION_ONNXRUNTIME_ROOT}/include"
+  )
+endif()
+default_option(
+  AI_STEM_SEPARATION
+  "On-demand AI stem separation via ONNX Runtime (HTDemucs) - stage 1 standalone validation"
+  "Eigen3_FOUND;onnxruntime_FOUND"
+)
+if(AI_STEM_SEPARATION)
+  if(NOT Eigen3_FOUND)
+    message(FATAL_ERROR "AI_STEM_SEPARATION requires Eigen3 (set -DAI_STEM_SEPARATION_EIGEN3_ROOT=<path>)")
+  endif()
+  if(NOT onnxruntime_FOUND)
+    message(FATAL_ERROR "AI_STEM_SEPARATION requires onnxruntime (set -DAI_STEM_SEPARATION_ONNXRUNTIME_ROOT=<path>)")
+  endif()
+  add_subdirectory(lib/demucsonnx)
+  add_subdirectory(src/stemsep)
+endif()
+
 # SoundTouch
 find_package(SoundTouch 2.1.2 REQUIRED)
 target_link_libraries(mixxx-lib PRIVATE SoundTouch::SoundTouch)
