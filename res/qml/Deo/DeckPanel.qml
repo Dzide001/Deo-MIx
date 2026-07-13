@@ -139,8 +139,16 @@ Item {
                     accentColor: root.accentColor
                     group: root.group
                 }
-                Item {
+                // M4: stem pads, matching deckA_pads_block's position
+                // alongside the loop row in the spec (a sibling of
+                // deckA_loop_row within deckA_loop_pads_combo) as closely
+                // as this deck's simpler stacked-column structure allows.
+                Deo.StemPads {
                     Layout.fillHeight: true
+                    Layout.fillWidth: true
+                    Layout.minimumHeight: 60
+                    accentColor: root.accentColor
+                    group: root.group
                 }
             }
             // Right column: jog wheel/pitch fader + transport row.
