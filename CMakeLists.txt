@@ -4827,7 +4827,7 @@ if(onnxruntime_FOUND AND TARGET onnxruntime::onnxruntime)
 endif()
 default_option(
   AI_STEM_SEPARATION
-  "On-demand AI stem separation via ONNX Runtime (HTDemucs) - stage 1 standalone validation"
+  "On-demand AI stem separation via ONNX Runtime (HTDemucs) - standalone validation CLIs"
   "Eigen3_FOUND;onnxruntime_FOUND"
 )
 if(AI_STEM_SEPARATION)
@@ -4836,6 +4836,9 @@ if(AI_STEM_SEPARATION)
   endif()
   if(NOT onnxruntime_FOUND)
     message(FATAL_ERROR "AI_STEM_SEPARATION requires onnxruntime (set -DAI_STEM_SEPARATION_ONNXRUNTIME_ROOT=<path>)")
+  endif()
+  if(NOT FFMPEG)
+    message(FATAL_ERROR "AI_STEM_SEPARATION's stem file writer requires -DFFMPEG=ON")
   endif()
   add_subdirectory(lib/demucsonnx)
   add_subdirectory(src/stemsep)
