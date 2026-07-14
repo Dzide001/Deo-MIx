@@ -29,6 +29,9 @@ namespace mixxx {
 class ControlIndicatorTimer;
 class DbConnectionPool;
 class ScreensaverManager;
+#ifdef __AI_STEM_SEPARATION__
+class StemSeparationManager;
+#endif
 
 class CoreServices : public QObject {
     Q_OBJECT
@@ -88,6 +91,12 @@ class CoreServices : public QObject {
         return m_pTrackCollectionManager;
     }
 
+#ifdef __AI_STEM_SEPARATION__
+    std::shared_ptr<StemSeparationManager> getStemSeparationManager() const {
+        return m_pStemSeparationManager;
+    }
+#endif
+
     std::shared_ptr<SettingsManager> getSettingsManager() const {
         return m_pSettingsManager;
     }
@@ -136,6 +145,9 @@ class CoreServices : public QObject {
     std::shared_ptr<DbConnectionPool> m_pDbConnectionPool;
     std::shared_ptr<TrackCollectionManager> m_pTrackCollectionManager;
     std::shared_ptr<Library> m_pLibrary;
+#ifdef __AI_STEM_SEPARATION__
+    std::shared_ptr<StemSeparationManager> m_pStemSeparationManager;
+#endif
 
     std::shared_ptr<KeyboardEventFilter> m_pKeyboardEventFilter;
 

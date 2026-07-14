@@ -4840,8 +4840,30 @@ if(AI_STEM_SEPARATION)
   if(NOT FFMPEG)
     message(FATAL_ERROR "AI_STEM_SEPARATION's stem file writer requires -DFFMPEG=ON")
   endif()
+  if(NOT STEM)
+    message(FATAL_ERROR "AI_STEM_SEPARATION requires STEM (the .stem.mp4 file format reader) to be enabled")
+  endif()
   add_subdirectory(lib/demucsonnx)
   add_subdirectory(src/stemsep)
+
+  # Stage 3a: link the separation pipeline into mixxx-lib itself (still
+  # opt-in only -- AI_STEM_SEPARATION stays default OFF). Everything here
+  # is guarded by __AI_STEM_SEPARATION__, mirroring the existing __STEM__
+  # convention.
+  target_compile_definitions(mixxx-lib PUBLIC __AI_STEM_SEPARATION__)
+  target_sources(
+    mixxx-lib
+    PRIVATE
+      src/library/stemseparation/stemseparationjob.cpp
+      src/library/stemseparation/stemseparationmanager.cpp
+      src/library/stemseparation/trackmetadatacopy.cpp
+      src/preferences/dialog/dlgprefaistemseparationdlg.ui
+      src/preferences/dialog/dlgprefaistemseparation.cpp
+  )
+  target_link_libraries(mixxx-lib PRIVATE demucsonnx stemwriter)
+  if(BUILD_TESTING)
+    target_sources(mixxx-test PRIVATE src/test/stemseparationjob_test.cpp)
+  endif()
 endif()
 
 # SoundTouch

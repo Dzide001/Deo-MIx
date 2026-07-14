@@ -28,6 +28,9 @@
 #include "library/overviewcache.h"
 #include "library/trackcollection.h"
 #include "library/trackcollectionmanager.h"
+#ifdef __AI_STEM_SEPARATION__
+#include "library/stemseparation/stemseparationmanager.h"
+#endif
 #include "mixer/playerinfo.h"
 #include "mixer/playermanager.h"
 #include "moc_coreservices.cpp"
@@ -618,6 +621,14 @@ void CoreServices::initialize(QApplication* pApp) {
             pConfig,
             m_pDbConnectionPool);
 
+#ifdef __AI_STEM_SEPARATION__
+    m_pStemSeparationManager = std::make_shared<mixxx::StemSeparationManager>(
+            this,
+            pConfig,
+            m_pTrackCollectionManager.get(),
+            m_pPlayerManager.get());
+#endif
+
     m_pLibrary = std::make_shared<Library>(
             this,
             pConfig,
@@ -916,6 +927,13 @@ void CoreServices::finalize() {
     ControllerScriptEngineBase::registerTrackCollectionManager(nullptr);
 #endif
     ControllerScriptEngineBase::registerPlayerManager(nullptr);
+
+#ifdef __AI_STEM_SEPARATION__
+    // Cancel and wait for any in-flight job before PlayerManager/
+    // TrackCollectionManager (which it holds raw pointers to) are torn down.
+    qDebug() << t.elapsed(false).debugMillisWithUnit() << "deleting StemSeparationManager";
+    CLEAR_AND_CHECK_DELETED(m_pStemSeparationManager);
+#endif
 
     // Stop all pending library operations
     qDebug() << t.elapsed(false).debugMillisWithUnit() << "stopping pending Library tasks";

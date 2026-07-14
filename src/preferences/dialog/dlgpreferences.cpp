@@ -40,6 +40,10 @@
 #include "preferences/dialog/dlgprefbroadcast.h"
 #endif // __BROADCAST__
 
+#ifdef __AI_STEM_SEPARATION__
+#include "preferences/dialog/dlgprefaistemseparation.h"
+#endif // __AI_STEM_SEPARATION__
+
 #include "preferences/dialog/dlgprefbeats.h"
 #include "preferences/dialog/dlgprefkey.h"
 #include "preferences/dialog/dlgprefrecord.h"
@@ -222,6 +226,14 @@ DlgPreferences::DlgPreferences(
                           new QTreeWidgetItem(contentsTreeWidget, QTreeWidgetItem::Type)),
             tr("Recording"),
             "ic_preferences_recording.svg");
+
+#ifdef __AI_STEM_SEPARATION__
+    addPageWidget(PreferencesPage(
+                          new DlgPrefAiStemSeparation(this, m_pConfig),
+                          new QTreeWidgetItem(contentsTreeWidget, QTreeWidgetItem::Type)),
+            tr("AI Stem Separation"),
+            "ic_preferences_effects.svg");
+#endif // __AI_STEM_SEPARATION__
 
     addPageWidget(PreferencesPage(
                           new DlgPrefBeats(this, m_pConfig),
