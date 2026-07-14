@@ -265,7 +265,7 @@ Item {
                         if (Mixxx.StemSeparation.isRunning) {
                             return Math.round(Mixxx.StemSeparation.progress * 100) + "%";
                         }
-                        return root.stemSeparationError ? "Failed" : "Prepare Stems";
+                        return root.stemSeparationError ? "Failed" : "Get Stems";
                     }
 
                     ToolTip.text: root.stemSeparationError

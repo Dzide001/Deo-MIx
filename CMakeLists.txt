@@ -4865,6 +4865,18 @@ if(AI_STEM_SEPARATION)
   if(BUILD_TESTING)
     target_sources(mixxx-test PRIVATE src/test/stemseparationjob_test.cpp)
   endif()
+
+  # mixxx-qml-lib does NOT link mixxx-lib (no target_link_libraries edge
+  # between them), so mixxx-lib's PUBLIC __AI_STEM_SEPARATION__ definition
+  # above never reaches it -- qmlapplication.cpp (compiled as part of
+  # mixxx-qml-lib) has its own #ifdef __AI_STEM_SEPARATION__ block (the
+  # QmlStemSeparationProxy::s_pStemSeparationManager seeding call) that
+  # needs this defined independently, or that line is silently compiled
+  # out and the QML singleton stays permanently unseeded even though
+  # CoreServices::m_pStemSeparationManager itself was constructed fine.
+  if(TARGET mixxx-qml-lib)
+    target_compile_definitions(mixxx-qml-lib PUBLIC __AI_STEM_SEPARATION__)
+  endif()
 endif()
 
 # qmlstemseparationproxy.cpp (src/qml/, added to mixxx-qml-lib's main
