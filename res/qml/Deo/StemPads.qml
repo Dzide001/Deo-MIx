@@ -105,6 +105,11 @@ Item {
         }
     }
 
+    // Briefly shown on the Prepare Stems pad itself in place of its normal
+    // label when a job fails (e.g. no model path configured) -- there's no
+    // toast/notification system in this skin to show it in instead.
+    property string stemSeparationError: ""
+
     // Mixxx.StemSeparation is always a registered QML singleton (see
     // qmlstemseparationproxy.cpp); when the app wasn't built with
     // AI_STEM_SEPARATION it just stays permanently idle (isRunning is
@@ -115,7 +120,15 @@ Item {
 
         function onFailed(message) {
             console.warn("Stem separation failed:", message);
+            root.stemSeparationError = message;
+            stemSeparationErrorTimer.restart();
         }
+    }
+    Timer {
+        id: stemSeparationErrorTimer
+
+        interval: 4000
+        onTriggered: root.stemSeparationError = ""
     }
 
     RowLayout {
@@ -245,14 +258,21 @@ Item {
                 Skin.Button {
                     Layout.fillHeight: true
                     Layout.fillWidth: true
-                    activeColor: root.accentColor
+                    activeColor: root.stemSeparationError ? "#B4453F" : root.accentColor
                     enabled: !root.hasStems && !Mixxx.StemSeparation.isRunning
                     opacity: enabled ? 1.0 : 0.35
-                    text: Mixxx.StemSeparation.isRunning
-                        ? Math.round(Mixxx.StemSeparation.progress * 100) + "%"
-                        : "Prepare Stems"
+                    text: {
+                        if (Mixxx.StemSeparation.isRunning) {
+                            return Math.round(Mixxx.StemSeparation.progress * 100) + "%";
+                        }
+                        return root.stemSeparationError ? "Failed" : "Prepare Stems";
+                    }
+
+                    ToolTip.text: root.stemSeparationError
+                    ToolTip.visible: root.stemSeparationError !== "" && hovered
 
                     onClicked: {
+                        root.stemSeparationError = "";
                         const player = Mixxx.PlayerManager.getPlayer(root.group);
                         if (player && player.currentTrack) {
                             Mixxx.StemSeparation.prepareStems(player.currentTrack, root.group);
