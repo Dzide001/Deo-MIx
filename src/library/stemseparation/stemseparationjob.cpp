@@ -8,6 +8,7 @@
 
 #include <algorithm>
 #include <array>
+#include <thread>
 
 #include "audio/types.h"
 #include "library/stemseparation/trackmetadatacopy.h"
@@ -167,7 +168,11 @@ void StemSeparationJob::run() {
     demucsonnx::demucs_model model;
     try {
         Ort::SessionOptions sessionOptions;
-        sessionOptions.SetIntraOpNumThreads(1);
+        // Single-threaded was Stage 1's deliberate choice for deterministic
+        // validation, never revisited since -- use all available cores for
+        // real use, ONNX Runtime's math kernels parallelize well.
+        sessionOptions.SetIntraOpNumThreads(
+                std::max(1u, std::thread::hardware_concurrency()));
         if (!demucsonnx::load_model(readFileBytes(m_request.modelPath), model, sessionOptions)) {
             m_lastErrorMessage = tr("Failed to load the HTDemucs model.");
             emit failed(m_lastErrorMessage);

@@ -9,11 +9,13 @@
 #include <demucs.hpp>
 #include <onnxruntime_cxx_api.h>
 
+#include <algorithm>
 #include <chrono>
 #include <cmath>
 #include <fstream>
 #include <iostream>
 #include <string>
+#include <thread>
 #include <vector>
 
 #include "wavio.h"
@@ -98,7 +100,7 @@ int main(int argc, char** argv) {
         const std::vector<char> modelBytes = readFileBytes(args.modelPath);
 
         Ort::SessionOptions sessionOptions;
-        sessionOptions.SetIntraOpNumThreads(1);
+        sessionOptions.SetIntraOpNumThreads(std::max(1u, std::thread::hardware_concurrency()));
         // CPU execution provider only -- see file header comment.
 
         demucsonnx::demucs_model model;
