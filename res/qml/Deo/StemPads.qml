@@ -47,9 +47,16 @@ Item {
 
     function findStemIndex(pattern) {
         if (!root.stemsModel) {
+            console.log("findStemIndex(" + pattern + "): stemsModel is null/undefined");
             return -1;
         }
-        for (let i = 0; i < root.stemsModel.rowCount(); i++) {
+        const n = root.stemsModel.rowCount();
+        let labels = [];
+        for (let i = 0; i < n; i++) {
+            labels.push(root.stemsModel.get(i).label);
+        }
+        console.log("findStemIndex(" + pattern + "): rowCount=" + n + " labels=" + JSON.stringify(labels));
+        for (let i = 0; i < n; i++) {
             if (root.stemsModel.get(i).label.toLowerCase().includes(pattern)) {
                 return i;
             }
