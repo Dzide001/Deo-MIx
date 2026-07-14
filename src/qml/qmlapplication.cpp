@@ -21,6 +21,7 @@
 #include "qml/asyncimageprovider.h"
 #include "qml/qmldlgpreferencesproxy.h"
 #include "qml/qmlrecordingproxy.h"
+#include "qml/qmlstemseparationproxy.h"
 #include "soundio/soundmanager.h"
 #include "util/versionstore.h"
 #include "waveform/guitick.h"
@@ -180,6 +181,10 @@ QmlApplication::QmlApplication(
     QmlDlgPreferencesProxy::s_pInstance =
             std::make_unique<QmlDlgPreferencesProxy>(pDlgPreferences, this);
     QmlRecordingProxy::s_pRecordingManager = m_pCoreServices->getRecordingManager();
+#ifdef __AI_STEM_SEPARATION__
+    mixxx::qml::QmlStemSeparationProxy::s_pStemSeparationManager =
+            m_pCoreServices->getStemSeparationManager();
+#endif
 
     m_pMenuBar = std::make_unique<QMenuBar>();
     QMenu* pApplicationMenu = m_pMenuBar->addMenu(QCoreApplication::applicationName());
@@ -269,6 +274,9 @@ void QmlApplication::slotFrameSwapped() {
 QmlApplication::~QmlApplication() {
     // Delete all the QML singletons in order to prevent leak detection in CoreService
     QmlRecordingProxy::s_pRecordingManager.reset();
+#ifdef __AI_STEM_SEPARATION__
+    mixxx::qml::QmlStemSeparationProxy::s_pStemSeparationManager.reset();
+#endif
     QmlDlgPreferencesProxy::s_pInstance.reset();
     m_visualsManager.reset();
     m_pAppEngine.reset();

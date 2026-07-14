@@ -3987,6 +3987,7 @@ if(QML)
       src/qml/qmlplayermanagerproxy.cpp
       src/qml/qmlplayerproxy.cpp
       src/qml/qmlrecordingproxy.cpp
+      src/qml/qmlstemseparationproxy.cpp
       src/qml/qmlsidebarmodelproxy.cpp
       src/qml/qmllibrarytracklistcolumn.cpp
       src/qml/qmltrackproxy.cpp
@@ -4865,6 +4866,16 @@ if(AI_STEM_SEPARATION)
     target_sources(mixxx-test PRIVATE src/test/stemseparationjob_test.cpp)
   endif()
 endif()
+
+# qmlstemseparationproxy.cpp (src/qml/, added to mixxx-qml-lib's main
+# source list above) is compiled unconditionally, regardless of
+# AI_STEM_SEPARATION: it's the QML-facing Mixxx.StemSeparation singleton
+# StemPads.qml always binds to. When AI_STEM_SEPARATION is off,
+# CoreServices::getStemSeparationManager() doesn't exist so it's never
+# seeded (see qmlapplication.cpp) -- the singleton then just stays
+# permanently idle (isRunning=false, prepareStems() a no-op) rather than
+# being unavailable to QML, which would break the always-shipped M4 pad
+# grid for the common (feature-off) build.
 
 # SoundTouch
 find_package(SoundTouch 2.1.2 REQUIRED)

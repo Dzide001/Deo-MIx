@@ -105,6 +105,19 @@ Item {
         }
     }
 
+    // Mixxx.StemSeparation is always a registered QML singleton (see
+    // qmlstemseparationproxy.cpp); when the app wasn't built with
+    // AI_STEM_SEPARATION it just stays permanently idle (isRunning is
+    // always false, prepareStems() is a no-op) rather than being
+    // undefined, so no skin-side feature flag is needed here.
+    Connections {
+        target: Mixxx.StemSeparation
+
+        function onFailed(message) {
+            console.warn("Stem separation failed:", message);
+        }
+    }
+
     RowLayout {
         anchors.fill: parent
         spacing: 4
@@ -224,15 +237,27 @@ Item {
                     text: "Drums"
                     toggleable: true
                 }
-                // No real per-hit isolation exists for these two --
-                // visible so the grid always shows 8 pads, but disabled
-                // since there's nothing real to bind them to yet.
+                // No real per-hit isolation exists for a HiHat stem --
+                // this slot instead triggers AI stem separation for
+                // tracks that don't have real stems yet. Stems FX is a
+                // separate, still-disabled placeholder (deferred: wiring
+                // to Mixxx's existing per-stem QuickEffectRack1 controls).
                 Skin.Button {
                     Layout.fillHeight: true
                     Layout.fillWidth: true
-                    enabled: false
-                    opacity: 0.35
-                    text: "HiHat"
+                    activeColor: root.accentColor
+                    enabled: !root.hasStems && !Mixxx.StemSeparation.isRunning
+                    opacity: enabled ? 1.0 : 0.35
+                    text: Mixxx.StemSeparation.isRunning
+                        ? Math.round(Mixxx.StemSeparation.progress * 100) + "%"
+                        : "Prepare Stems"
+
+                    onClicked: {
+                        const player = Mixxx.PlayerManager.getPlayer(root.group);
+                        if (player && player.currentTrack) {
+                            Mixxx.StemSeparation.prepareStems(player.currentTrack, root.group);
+                        }
+                    }
                 }
                 Skin.Button {
                     Layout.fillHeight: true
