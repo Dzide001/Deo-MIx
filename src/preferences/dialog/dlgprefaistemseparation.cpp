@@ -40,11 +40,19 @@ void DlgPrefAiStemSeparation::slotResetToDefaults() {
 }
 
 void DlgPrefAiStemSeparation::slotBrowseModel() {
+    // DontUseNativeDialog: the native macOS file panel has been reported
+    // to hang when triggered from this Qt Quick-based app (modal native
+    // dialogs on top of a QQuickWindow are a known trouble spot on
+    // macOS) -- Qt's own cross-platform dialog sidesteps that. The path
+    // field itself is also editable directly (not read-only) as a
+    // fallback in case this dialog has issues too.
     const QString path = QFileDialog::getOpenFileName(
             this,
             tr("Select HTDemucs ONNX Model"),
             LineEditModelPath->text(),
-            tr("ONNX Model (*.onnx)"));
+            tr("ONNX Model (*.onnx)"),
+            nullptr,
+            QFileDialog::DontUseNativeDialog);
     if (!path.isEmpty()) {
         LineEditModelPath->setText(path);
     }
