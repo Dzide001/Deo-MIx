@@ -3,6 +3,7 @@
 #include <QObject>
 #include <QQmlEngine>
 #include <QQmlParserStatus>
+#include <QTimer>
 #include <memory>
 
 #include "control/controlproxy.h"
@@ -22,6 +23,10 @@ class QmlControlProxy : public QObject, public QQmlParserStatus {
     Q_PROPERTY(bool initialized READ isInitialized NOTIFY initializedChanged)
     Q_PROPERTY(double value READ getValue WRITE setValue NOTIFY valueChanged)
     Q_PROPERTY(double parameter READ getParameter WRITE setParameter NOTIFY parameterChanged)
+    // M8: true for a brief moment (see kHardwareDrivenDecayMs in the .cpp)
+    // whenever this control's value was just changed by a controller
+    // mapping script, so QML widgets can show a "driven by hardware" cue.
+    Q_PROPERTY(bool hardwareDriven READ isHardwareDriven NOTIFY hardwareDrivenChanged)
     QML_NAMED_ELEMENT(ControlProxy)
 
   public:
@@ -54,6 +59,7 @@ class QmlControlProxy : public QObject, public QQmlParserStatus {
 
     bool isKeyValid() const;
     bool isInitialized() const;
+    bool isHardwareDriven() const;
 
     /// Reset the control to the default value.
     Q_INVOKABLE void reset();
@@ -66,10 +72,13 @@ class QmlControlProxy : public QObject, public QQmlParserStatus {
     void initializedChanged(bool initialized);
     void valueChanged(double newValue);
     void parameterChanged(double newParameter);
+    void hardwareDrivenChanged(bool hardwareDriven);
 
   private slots:
     /// Emits both the valueChanged and parameterChanged signals
     void slotControlProxyValueChanged(double newValue);
+    /// M8: flips hardwareDriven true and (re)starts the decay timer
+    void slotHardwareDriven(double newValue);
 
   private:
     /// (Re-)Initializes or resets the pointer to the underlying control proxy.
@@ -84,6 +93,9 @@ class QmlControlProxy : public QObject, public QQmlParserStatus {
     /// QML object creation is complete.
     bool m_isComponentComplete;
     std::unique_ptr<ControlProxy> m_pControlProxy;
+
+    bool m_hardwareDriven;
+    QTimer m_hardwareDrivenDecayTimer;
 };
 
 } // namespace qml

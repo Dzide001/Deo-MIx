@@ -32,6 +32,17 @@
     <key>NSMicrophoneUsageDescription</key>
     <string>Mixxx requires microphone access for microphone and vinyl input.</string>
 
+    <!-- M12 Stage 3y: avfvideosrc (VideoEngineManager's camera input
+         branch) is a separate macOS TCC permission category from
+         microphone access -- without this key, camera capture can
+         never prompt for authorization at all (confirmed: a bare,
+         non-bundled dev build with no Info.plist hung indefinitely
+         trying to reach PLAYING with a camera source, since there was
+         no app identity for TCC to grant/deny access to in the first
+         place). -->
+    <key>NSCameraUsageDescription</key>
+    <string>Mixxx requires camera access for live camera video input.</string>
+
     <key>NSPrincipalClass</key>
     <string>NSApplication</string>
 

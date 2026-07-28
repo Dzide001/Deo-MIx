@@ -352,6 +352,11 @@ class QmlControllerManagerProxy : public QObject {
         return m_knownMappings.value(type);
     }
 
+    /// Manual rescan of connected controllers (e.g. a device plugged in
+    /// after Mixxx was already running). knownDevices/unknownDevices
+    /// refresh automatically via the existing devicesChanged() connection.
+    Q_INVOKABLE void rescan();
+
     static QmlControllerManagerProxy* create(QQmlEngine* pQmlEngine, QJSEngine* pJsEngine);
     static void registerManager(std::shared_ptr<ControllerManager> pManager,
             bool controllerPreviewScreens = false) {

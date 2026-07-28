@@ -32,6 +32,9 @@ class ScreensaverManager;
 #ifdef __AI_STEM_SEPARATION__
 class StemSeparationManager;
 #endif
+#ifdef __VIDEO_ENGINE__
+class VideoEngineManager;
+#endif
 
 class CoreServices : public QObject {
     Q_OBJECT
@@ -96,6 +99,11 @@ class CoreServices : public QObject {
         return m_pStemSeparationManager;
     }
 #endif
+#ifdef __VIDEO_ENGINE__
+    std::shared_ptr<VideoEngineManager> getVideoEngineManager() const {
+        return m_pVideoEngineManager;
+    }
+#endif
 
     std::shared_ptr<SettingsManager> getSettingsManager() const {
         return m_pSettingsManager;
@@ -147,6 +155,9 @@ class CoreServices : public QObject {
     std::shared_ptr<Library> m_pLibrary;
 #ifdef __AI_STEM_SEPARATION__
     std::shared_ptr<StemSeparationManager> m_pStemSeparationManager;
+#endif
+#ifdef __VIDEO_ENGINE__
+    std::shared_ptr<VideoEngineManager> m_pVideoEngineManager;
 #endif
 
     std::shared_ptr<KeyboardEventFilter> m_pKeyboardEventFilter;

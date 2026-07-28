@@ -31,6 +31,9 @@
 #ifdef __AI_STEM_SEPARATION__
 #include "library/stemseparation/stemseparationmanager.h"
 #endif
+#ifdef __VIDEO_ENGINE__
+#include "library/videoengine/videoenginemanager.h"
+#endif
 #include "mixer/playerinfo.h"
 #include "mixer/playermanager.h"
 #include "moc_coreservices.cpp"
@@ -628,6 +631,9 @@ void CoreServices::initialize(QApplication* pApp) {
             m_pTrackCollectionManager.get(),
             m_pPlayerManager.get());
 #endif
+#ifdef __VIDEO_ENGINE__
+    m_pVideoEngineManager = std::make_shared<mixxx::VideoEngineManager>(this);
+#endif
 
     m_pLibrary = std::make_shared<Library>(
             this,
@@ -933,6 +939,10 @@ void CoreServices::finalize() {
     // TrackCollectionManager (which it holds raw pointers to) are torn down.
     qDebug() << t.elapsed(false).debugMillisWithUnit() << "deleting StemSeparationManager";
     CLEAR_AND_CHECK_DELETED(m_pStemSeparationManager);
+#endif
+#ifdef __VIDEO_ENGINE__
+    qDebug() << t.elapsed(false).debugMillisWithUnit() << "deleting VideoEngineManager";
+    CLEAR_AND_CHECK_DELETED(m_pVideoEngineManager);
 #endif
 
     // Stop all pending library operations

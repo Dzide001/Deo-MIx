@@ -1,51 +1,55 @@
 import QtQuick 2.12
 import QtQuick.Controls 2.12
-import QtQuick.Layouts
-import Mixxx 1.0 as Mixxx
 import "." as Deo
 import ".." as Skin
 import "../Theme"
 
-// GAIN knob, channel fader, headphone-cue toggle — one deck's mixer
-// strip. VU meters live in a separate shared cluster between the two
-// strips (see AudioMixerPanel.qml / MixerVuMeters.qml), matching the
-// spec's mixer_vu_meter group rather than flanking each fader
-// individually. accentColor drives the PFL "engaged" color per M5's
-// acceptance criteria.
-ColumnLayout {
+// GAIN knob, channel fader, headphone-cue toggle -- one deck's mixer
+// strip. Rebuilt as a plain Item with the literal coordinates from the
+// user's reference mockup (MixerDesignMockupA.qml), matching this
+// strip's own real allocated 55x345 zone within the mockup's 297x378
+// canvas exactly. VU meters live in a separate shared cluster (see
+// AudioMixerPanel.qml / MixerVuMeters.qml).
+Item {
     id: root
 
     required property string group
     required property color accentColor
 
-    spacing: 6
+    width: 55
+    height: 345
 
     Skin.ControlKnob {
-        Layout.alignment: Qt.AlignHCenter
+        x: 6
+        y: 8
+        width: 42
+        height: 42
         color: Theme.gainKnobColor
         group: root.group
-        height: 36
         key: "pregain"
-        width: 36
     }
     Label {
-        Layout.alignment: Qt.AlignHCenter
+        x: 0
+        y: 52
+        width: 55
         color: Theme.deckTextSecondary
         font.family: Theme.fontFamily
         font.pixelSize: 10
+        horizontalAlignment: Text.AlignHCenter
         text: "GAIN"
     }
     Deo.ChannelFader {
-        Layout.fillHeight: true
-        Layout.fillWidth: true
-        Layout.preferredWidth: 34
-        Layout.alignment: Qt.AlignHCenter
+        x: 10
+        y: 75
+        width: 34
+        height: 174
         group: root.group
     }
     Skin.ControlButton {
-        Layout.alignment: Qt.AlignHCenter
-        Layout.preferredWidth: 34
-        Layout.preferredHeight: 26
+        x: 6
+        y: 259
+        width: 42
+        height: 42
         activeColor: root.accentColor
         group: root.group
         key: "pfl"

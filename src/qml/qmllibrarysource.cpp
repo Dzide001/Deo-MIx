@@ -20,6 +20,7 @@
 #include "library/treeitemmodel.h"
 #include "moc_qmllibrarysource.cpp"
 #include "qmllibraryproxy.h"
+#include "qmlrecordingproxy.h"
 #include "track/track.h"
 
 AllTrackLibraryFeature::AllTrackLibraryFeature(Library* pLibrary, UserSettingsPointer pConfig)
@@ -84,6 +85,64 @@ QmlLibraryBrowseSource::QmlLibraryBrowseSource(
         : QmlLibrarySource(parent, columns),
           m_pFeature(std::make_unique<BrowseFeature>(
                   QmlLibraryProxy::get(), QmlConfigProxy::get(), nullptr)) {
+    connect(m_pFeature.get(),
+            &LibraryFeature::showTrackModel,
+            this,
+            &QmlLibrarySource::slotShowTrackModel);
+}
+
+QmlLibraryRecordingSource::QmlLibraryRecordingSource(
+        QObject* parent, const QList<QmlLibraryTrackListColumn*>& columns)
+        : QmlLibrarySource(parent, columns),
+          m_pFeature(std::make_unique<RecordingFeature>(
+                  QmlLibraryProxy::get(),
+                  QmlConfigProxy::get(),
+                  QmlRecordingProxy::s_pRecordingManager.get())) {
+    connect(m_pFeature.get(),
+            &LibraryFeature::showTrackModel,
+            this,
+            &QmlLibrarySource::slotShowTrackModel);
+}
+
+QmlLibraryHistorySource::QmlLibraryHistorySource(
+        QObject* parent, const QList<QmlLibraryTrackListColumn*>& columns)
+        : QmlLibrarySource(parent, columns),
+          m_pFeature(std::make_unique<SetlogFeature>(
+                  QmlLibraryProxy::get(), QmlConfigProxy::get())) {
+    connect(m_pFeature.get(),
+            &LibraryFeature::showTrackModel,
+            this,
+            &QmlLibrarySource::slotShowTrackModel);
+}
+
+QmlLibraryAnalyzeSource::QmlLibraryAnalyzeSource(
+        QObject* parent, const QList<QmlLibraryTrackListColumn*>& columns)
+        : QmlLibrarySource(parent, columns),
+          m_pFeature(std::make_unique<AnalysisFeature>(
+                  QmlLibraryProxy::get(), QmlConfigProxy::get())) {
+    connect(m_pFeature.get(),
+            &LibraryFeature::showTrackModel,
+            this,
+            &QmlLibrarySource::slotShowTrackModel);
+}
+
+QmlLibraryAutoDJSource::QmlLibraryAutoDJSource(
+        QObject* parent, const QList<QmlLibraryTrackListColumn*>& columns)
+        : QmlLibrarySource(parent, columns),
+          m_pFeature(QmlLibraryProxy::get()->getAutoDJFeature()) {
+    if (m_pFeature) {
+        connect(m_pFeature,
+                &LibraryFeature::showTrackModel,
+                this,
+                &QmlLibrarySource::slotShowTrackModel);
+    }
+}
+
+QmlLibraryITunesSource::QmlLibraryITunesSource(
+        QObject* parent, const QList<QmlLibraryTrackListColumn*>& columns)
+        : QmlLibrarySource(parent, columns),
+          m_pFeature(std::make_unique<ITunesFeature>(
+                  QmlLibraryProxy::get(), QmlConfigProxy::get())) {
     connect(m_pFeature.get(),
             &LibraryFeature::showTrackModel,
             this,

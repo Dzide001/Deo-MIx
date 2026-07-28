@@ -782,5 +782,11 @@ std::shared_ptr<ControllerManager> QmlControllerManagerProxy::internal() const {
     return m_pControllerManager;
 }
 
+void QmlControllerManagerProxy::rescan() {
+    if (m_pControllerManager) {
+        m_pControllerManager->rescanDevices();
+    }
+}
+
 } // namespace qml
 } // namespace mixxx

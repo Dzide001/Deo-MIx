@@ -19,9 +19,12 @@
 #include "moc_qmlapplication.cpp"
 #include "preferences/configobject.h"
 #include "qml/asyncimageprovider.h"
+#include "qml/qmlbroadcastproxy.h"
 #include "qml/qmldlgpreferencesproxy.h"
 #include "qml/qmlrecordingproxy.h"
 #include "qml/qmlstemseparationproxy.h"
+#include "qml/qmlvideoengineproxy.h"
+#include "qml/qmlvideopreviewitem.h"
 #include "soundio/soundmanager.h"
 #include "util/versionstore.h"
 #include "waveform/guitick.h"
@@ -181,9 +184,17 @@ QmlApplication::QmlApplication(
     QmlDlgPreferencesProxy::s_pInstance =
             std::make_unique<QmlDlgPreferencesProxy>(pDlgPreferences, this);
     QmlRecordingProxy::s_pRecordingManager = m_pCoreServices->getRecordingManager();
+    QmlBroadcastProxy::s_pBroadcastSettings =
+            m_pCoreServices->getSettingsManager()->broadcastSettings();
 #ifdef __AI_STEM_SEPARATION__
     mixxx::qml::QmlStemSeparationProxy::s_pStemSeparationManager =
             m_pCoreServices->getStemSeparationManager();
+#endif
+#ifdef __VIDEO_ENGINE__
+    mixxx::qml::QmlVideoEngineProxy::s_pVideoEngineManager =
+            m_pCoreServices->getVideoEngineManager();
+    mixxx::qml::QmlVideoPreviewItem::s_pVideoEngineManager =
+            m_pCoreServices->getVideoEngineManager();
 #endif
 
     m_pMenuBar = std::make_unique<QMenuBar>();
@@ -274,8 +285,13 @@ void QmlApplication::slotFrameSwapped() {
 QmlApplication::~QmlApplication() {
     // Delete all the QML singletons in order to prevent leak detection in CoreService
     QmlRecordingProxy::s_pRecordingManager.reset();
+    QmlBroadcastProxy::s_pBroadcastSettings.reset();
 #ifdef __AI_STEM_SEPARATION__
     mixxx::qml::QmlStemSeparationProxy::s_pStemSeparationManager.reset();
+#endif
+#ifdef __VIDEO_ENGINE__
+    mixxx::qml::QmlVideoEngineProxy::s_pVideoEngineManager.reset();
+    mixxx::qml::QmlVideoPreviewItem::s_pVideoEngineManager.reset();
 #endif
     QmlDlgPreferencesProxy::s_pInstance.reset();
     m_visualsManager.reset();

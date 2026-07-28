@@ -22,6 +22,7 @@ void QmlStemsModel::setStems(QList<StemInfo> stems) {
     beginResetModel();
     m_stems = std::move(stems);
     endResetModel();
+    emit stemsChanged();
 }
 
 QVariant QmlStemsModel::data(const QModelIndex& index, int role) const {

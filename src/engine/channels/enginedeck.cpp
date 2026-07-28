@@ -85,6 +85,19 @@ EngineDeck::EngineDeck(
         m_stemVuMeter.emplace_back(std::make_unique<EngineVuMeter>(
                 getGroupForStem(getGroup(), stemIdx), QString(), false));
     }
+
+    m_pStemAcapella = std::make_unique<ControlPushButton>(
+            ConfigKey(getGroup(), QStringLiteral("stem_acapella")));
+    connect(m_pStemAcapella.get(),
+            &ControlObject::valueChanged,
+            this,
+            &EngineDeck::slotStemAcapella);
+    m_pStemInstrumental = std::make_unique<ControlPushButton>(
+            ConfigKey(getGroup(), QStringLiteral("stem_instrumental")));
+    connect(m_pStemInstrumental.get(),
+            &ControlObject::valueChanged,
+            this,
+            &EngineDeck::slotStemInstrumental);
 #endif
 }
 
@@ -93,6 +106,19 @@ void EngineDeck::slotTrackLoaded(TrackPointer pNewTrack,
         TrackPointer) {
     VERIFY_OR_DEBUG_ASSERT(m_pStemCount) {
         return;
+    }
+    if (m_pLoadedTrack) {
+        disconnect(m_pLoadedTrack.get(),
+                &Track::stemsUpdated,
+                this,
+                &EngineDeck::slotStemsUpdated);
+    }
+    m_pLoadedTrack = pNewTrack;
+    if (m_pLoadedTrack) {
+        connect(m_pLoadedTrack.get(),
+                &Track::stemsUpdated,
+                this,
+                &EngineDeck::slotStemsUpdated);
     }
     if (m_pConfig->getValue(
                 ConfigKey("[Mixer Profile]", "stem_auto_reset"), true) &&
@@ -103,11 +129,57 @@ void EngineDeck::slotTrackLoaded(TrackPointer pNewTrack,
         }
     }
     m_stemClonedState = false;
-    if (pNewTrack) {
-        int stemCount = pNewTrack->getStemInfo().size();
+    slotStemsUpdated();
+}
+
+void EngineDeck::slotStemsUpdated() {
+    VERIFY_OR_DEBUG_ASSERT(m_pStemCount) {
+        return;
+    }
+    if (m_pLoadedTrack) {
+        int stemCount = m_pLoadedTrack->getStemInfo().size();
         m_pStemCount->forceSet(stemCount);
     } else {
         m_pStemCount->forceSet(0);
+    }
+}
+
+int EngineDeck::findStemIndexByLabel(const QString& pattern) const {
+    if (!m_pLoadedTrack) {
+        return -1;
+    }
+    const QList<StemInfo> stemInfo = m_pLoadedTrack->getStemInfo();
+    for (int i = 0; i < stemInfo.size(); i++) {
+        if (stemInfo.at(i).getLabel().contains(pattern, Qt::CaseInsensitive)) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+void EngineDeck::slotStemAcapella(double v) {
+    if (v <= 0) {
+        return;
+    }
+    int vocalIdx = findStemIndexByLabel(QStringLiteral("vocal"));
+    if (vocalIdx < 0) {
+        return;
+    }
+    for (int stemIdx = 0; stemIdx < static_cast<int>(m_stemMute.size()); stemIdx++) {
+        m_stemMute[stemIdx]->set(stemIdx == vocalIdx ? 0.0 : 1.0);
+    }
+}
+
+void EngineDeck::slotStemInstrumental(double v) {
+    if (v <= 0) {
+        return;
+    }
+    int vocalIdx = findStemIndexByLabel(QStringLiteral("vocal"));
+    if (vocalIdx < 0) {
+        return;
+    }
+    for (int stemIdx = 0; stemIdx < static_cast<int>(m_stemMute.size()); stemIdx++) {
+        m_stemMute[stemIdx]->set(stemIdx == vocalIdx ? 1.0 : 0.0);
     }
 }
 #endif

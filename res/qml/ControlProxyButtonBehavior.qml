@@ -27,6 +27,9 @@ Item {
     readonly property real displayValue: displayControl.value
     readonly property bool isActive: displayControl.value > root.activeDisplayThreshold
     readonly property bool isVisuallyActive: root.isActive || root.visualActiveState
+    // M8: true briefly when this button's control was just changed by a
+    // mapped controller (see QmlControlProxy::hardwareDriven).
+    readonly property bool hardwareDriven: displayControl.hardwareDriven || control.hardwareDriven
     readonly property bool pressed: interactionArea.pressed
 
     signal primaryPressed(real displayValue)

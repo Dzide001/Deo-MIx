@@ -39,6 +39,44 @@ Category {
         load();
     }
 
+    RowLayout {
+        id: rescanRow
+
+        anchors.left: parent.left
+        anchors.leftMargin: 14
+        anchors.right: parent.right
+        anchors.rightMargin: 14
+        anchors.top: parent.top
+
+        // M13: the MIDI/HID controller Learning Wizard (interactively
+        // press a hardware control, pick which action to bind it to) has
+        // no QML equivalent anywhere in this settings surface -- it only
+        // exists in the legacy Qt Widgets preferences dialog
+        // (DlgPrefControllers). Rather than silently losing access to it
+        // now that the gear button opens this QML popup by default, this
+        // link keeps it one click away.
+        Skin.FormButton {
+            activeColor: "#999999"
+            backgroundColor: "#3F3F3F"
+            text: "Open Legacy Learning Wizard…"
+
+            onPressed: {
+                Mixxx.PreferencesDialog.show();
+            }
+        }
+        Item {
+            Layout.fillWidth: true
+        }
+        Skin.FormButton {
+            activeColor: "#999999"
+            backgroundColor: "#3F3F3F"
+            text: "Rescan"
+
+            onPressed: {
+                manager.rescan();
+            }
+        }
+    }
     ScrollView {
         id: scrollView
 
@@ -46,7 +84,8 @@ Category {
         anchors.bottomMargin: 12
         anchors.left: parent.left
         anchors.right: parent.right
-        anchors.top: parent.top
+        anchors.top: rescanRow.bottom
+        anchors.topMargin: 8
 
         ColumnLayout {
             spacing: root.selectedController ? 18 : 0

@@ -262,6 +262,11 @@ class EngineMixer : public QObject, public AudioSource {
 
     ChannelHandleFactoryPointer m_pChannelHandleFactory;
     void applyMainEffects(std::size_t bufferSize);
+    // First-pass master-bus limiter: instantaneous tanh soft-knee
+    // saturation above m_pMainLimiterThreshold, no attack/release envelope.
+    // Runs on m_main right after the main delay, just before the buffer is
+    // exposed to SoundManager via getMainBuffer()/buffer().
+    void applyMainLimiter(std::size_t bufferSize);
     void processHeadphones(
             const CSAMPLE_GAIN mainMixGainInHeadphones,
             std::size_t bufferSize);
@@ -323,6 +328,8 @@ class EngineMixer : public QObject, public AudioSource {
     std::unique_ptr<ControlPotmeter> m_pXFaderCalibration;
     std::unique_ptr<ControlPushButton> m_pXFaderReverse;
     std::unique_ptr<ControlPushButton> m_pHeadSplitEnabled;
+    std::unique_ptr<ControlPushButton> m_pMainLimiterEnabled;
+    std::unique_ptr<ControlPotmeter> m_pMainLimiterThreshold;
     std::unique_ptr<ControlObject> m_pKeylockEngine;
 
     PflGainCalculator m_headphoneGain;

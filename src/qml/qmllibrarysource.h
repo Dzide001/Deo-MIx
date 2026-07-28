@@ -11,11 +11,16 @@
 #include <QVariant>
 #include <memory>
 
+#include "library/analysis/analysisfeature.h"
+#include "library/autodj/autodjfeature.h"
 #include "library/browse/browsefeature.h"
+#include "library/itunes/itunesfeature.h"
 #include "library/libraryfeature.h"
+#include "library/recording/recordingfeature.h"
 #include "library/sidebarmodel.h"
 #include "library/trackset/crate/cratefeature.h"
 #include "library/trackset/playlistfeature.h"
+#include "library/trackset/setlogfeature.h"
 #include "library/treeitem.h"
 #include "qmlconfigproxy.h"
 #include "qmllibrarytracklistmodel.h"
@@ -160,6 +165,104 @@ class QmlLibraryBrowseSource : public QmlLibrarySource {
 
   private:
     std::unique_ptr<BrowseFeature> m_pFeature;
+};
+
+// Rough-sketch sidebar sources for the previously QML-unsurfaced backends
+// (M10 Recordings, M7 History/Auto DJ/Analyze). Same adapter shape as the
+// four sources above -- each just wraps the real, already-registered
+// LibraryFeature subclass. RecordingFeature/AutoDJFeature need an extra
+// manager pointer that isn't reachable through QmlLibraryProxy/QmlConfigProxy
+// alone, so those two pull it from the matching singleton proxy's static
+// shared_ptr (QmlRecordingProxy::s_pRecordingManager,
+// QmlPlayerManagerProxy::s_pPlayerManager), same objects CoreServices already
+// seeded at startup for the Recording/PlayerManager singletons.
+class QmlLibraryRecordingSource : public QmlLibrarySource {
+    Q_OBJECT
+    QML_NAMED_ELEMENT(LibraryRecordingSource)
+  public:
+    explicit QmlLibraryRecordingSource(QObject* parent = nullptr,
+            const QList<QmlLibraryTrackListColumn*>& columns = {});
+
+    LibraryFeature* internal() override {
+        return m_pFeature.get();
+    }
+
+  private:
+    std::unique_ptr<RecordingFeature> m_pFeature;
+};
+
+class QmlLibraryHistorySource : public QmlLibrarySource {
+    Q_OBJECT
+    QML_NAMED_ELEMENT(LibraryHistorySource)
+  public:
+    explicit QmlLibraryHistorySource(QObject* parent = nullptr,
+            const QList<QmlLibraryTrackListColumn*>& columns = {});
+
+    LibraryFeature* internal() override {
+        return m_pFeature.get();
+    }
+
+  private:
+    std::unique_ptr<SetlogFeature> m_pFeature;
+};
+
+class QmlLibraryAnalyzeSource : public QmlLibrarySource {
+    Q_OBJECT
+    QML_NAMED_ELEMENT(LibraryAnalyzeSource)
+  public:
+    explicit QmlLibraryAnalyzeSource(QObject* parent = nullptr,
+            const QList<QmlLibraryTrackListColumn*>& columns = {});
+
+    LibraryFeature* internal() override {
+        return m_pFeature.get();
+    }
+
+  private:
+    std::unique_ptr<AnalysisFeature> m_pFeature;
+};
+
+class QmlLibraryAutoDJSource : public QmlLibrarySource {
+    Q_OBJECT
+    QML_NAMED_ELEMENT(LibraryAutoDJSource)
+  public:
+    explicit QmlLibraryAutoDJSource(QObject* parent = nullptr,
+            const QList<QmlLibraryTrackListColumn*>& columns = {});
+
+    LibraryFeature* internal() override {
+        return m_pFeature;
+    }
+
+  private:
+    // Non-owning: unlike every other QmlLibrary*Source, AutoDJFeature must
+    // not be constructed twice (its AutoDJProcessor registers global
+    // "[AutoDJ]"-keyed ControlObjects, and a second instance collides with
+    // Library's own always-created one -- this used to construct a second
+    // AutoDJFeature here, which triggered
+    // "ControlObject already created" DEBUG_ASSERTs at startup). Reuses
+    // Library::getAutoDJFeature() instead.
+    AutoDJFeature* m_pFeature;
+};
+
+// Representative External Libraries entry (M7) -- establishes the pattern
+// for the rest (Rhythmbox/Traktor/Serato/Rekordbox/Banshee all share the
+// same BaseExternalLibraryFeature(Library*, UserSettingsPointer) + static
+// isSupported() shape as ITunesFeature and can be added the same way later).
+// ITunesFeature::isSupported() unconditionally returns true (it just checks
+// for an XML library path at import time, not at construction time), so no
+// availability gating is needed here, unlike a real per-platform check.
+class QmlLibraryITunesSource : public QmlLibrarySource {
+    Q_OBJECT
+    QML_NAMED_ELEMENT(LibraryITunesSource)
+  public:
+    explicit QmlLibraryITunesSource(QObject* parent = nullptr,
+            const QList<QmlLibraryTrackListColumn*>& columns = {});
+
+    LibraryFeature* internal() override {
+        return m_pFeature.get();
+    }
+
+  private:
+    std::unique_ptr<ITunesFeature> m_pFeature;
 };
 
 } // namespace qml

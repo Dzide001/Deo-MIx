@@ -17,6 +17,10 @@ IonDiscoverDJ.ledOff = 0x00;
 IonDiscoverDJ.scratchMode = false;
 IonDiscoverDJ.pitchDial1 = false;
 IonDiscoverDJ.pitchDial2 = false;
+// User-adjustable via Settings -> Controllers -> Ion Discover DJ (see the
+// <settings> block in the .midi.xml). 1.0 preserves the original hardcoded
+// behavior; applied as a multiplier across all three jog modes below.
+IonDiscoverDJ.jogSensitivity = engine.getSetting("jogSensitivity") || 1.0;
 
 IonDiscoverDJ.init = function (id) {    // called when the MIDI device is opened & set up
     print ("Ion Discover DJ id: \""+id+"\" initialized.");
@@ -66,13 +70,14 @@ IonDiscoverDJ.Deck = function (deckNumber, group) {
 };
 
 IonDiscoverDJ.Deck.prototype.jogMove = function(jogValue) {
+   var sensitivity = IonDiscoverDJ.jogSensitivity;
    if(this.shiftMode) {
-      var newRate = engine.getValue(this.group, "rate") + (jogValue/3000);
+      var newRate = engine.getValue(this.group, "rate") + (jogValue/3000) * sensitivity;
       engine.setValue(this.group, "rate", newRate);
    } else if(this.scratching) {
-      engine.scratchTick(this.deckNumber, jogValue/3);
+      engine.scratchTick(this.deckNumber, (jogValue/3) * sensitivity);
    } else {
-      jogValue = jogValue *10;
+      jogValue = jogValue * 10 * sensitivity;
       engine.setValue(this.group,"jog", jogValue);
    }
 };

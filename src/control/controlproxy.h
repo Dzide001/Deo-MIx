@@ -157,30 +157,24 @@ class ControlProxy : public QObject {
     /// instead. It will connect to the base ControlDoublePrivate as well.
     void valueChanged(double);
 
+    /// M8: fires alongside valueChanged() specifically when the change was
+    /// written by a controller mapping script (i.e. pSetter is a
+    /// ControlObjectScript, the one real, current write path controller
+    /// mappings use -- see control/controlobjectscript.h). Kept as a
+    /// separate opt-in signal rather than widening valueChanged()'s
+    /// signature, so every other ControlProxy/ControlObject call site is
+    /// untouched.
+    void valueChangedFromHardware(double);
+
   protected slots:
     /// Receives the value from the primary control by a unique direct connection
-    void slotValueChangedDirect(double v, QObject* pSetter) {
-        if (pSetter != this) {
-            // This is base implementation of this function without scaling
-            emit valueChanged(v);
-        }
-    }
+    void slotValueChangedDirect(double v, QObject* pSetter);
 
     /// Receives the value from the primary control by a unique auto connection
-    void slotValueChangedAuto(double v, QObject* pSetter) {
-        if (pSetter != this) {
-            // This is base implementation of this function without scaling
-            emit valueChanged(v);
-        }
-    }
+    void slotValueChangedAuto(double v, QObject* pSetter);
 
     /// Receives the value from the primary control by a unique Queued connection
-    void slotValueChangedQueued(double v, QObject* pSetter) {
-        if (pSetter != this) {
-            // This is base implementation of this function without scaling
-            emit valueChanged(v);
-        }
-    }
+    void slotValueChangedQueued(double v, QObject* pSetter);
 
   protected:
     /// Pointer to connected control.

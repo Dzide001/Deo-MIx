@@ -1916,6 +1916,10 @@ void Track::updateStreamInfoFromSource(
     const bool importCueInfos = m_pCueInfoImporterPending && !m_pCueInfoImporterPending->isEmpty();
 #ifdef __STEM__
     const bool importStemInfos = mixxx::StemInfoImporter::maybeStemFile(getLocation());
+    if (importStemInfos) {
+        qWarning() << "[STEMDBG2] Track::updateStreamInfoFromSource called for stem file"
+                   << getLocation() << "this=" << this;
+    }
 #endif
 
     if (!importBeats && !importCueInfos

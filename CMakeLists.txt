@@ -3968,6 +3968,7 @@ if(QML)
       src/qml/qmlautoreload.cpp
       src/qml/qmlbatteryproxy.cpp
       src/qml/qmlbeatsmodel.cpp
+      src/qml/qmlbroadcastproxy.cpp
       src/qml/qmlchainpresetmodel.cpp
       src/qml/qmlconfigproxy.cpp
       src/qml/qmlconfigproxybase.cpp
@@ -3988,6 +3989,8 @@ if(QML)
       src/qml/qmlplayerproxy.cpp
       src/qml/qmlrecordingproxy.cpp
       src/qml/qmlstemseparationproxy.cpp
+      src/qml/qmlvideoengineproxy.cpp
+      src/qml/qmlvideopreviewitem.cpp
       src/qml/qmlsidebarmodelproxy.cpp
       src/qml/qmllibrarytracklistcolumn.cpp
       src/qml/qmltrackproxy.cpp
@@ -4888,6 +4891,130 @@ endif()
 # permanently idle (isRunning=false, prepareStems() a no-op) rather than
 # being unavailable to QML, which would break the always-shipped M4 pad
 # grid for the common (feature-off) build.
+
+# M12 video engine, Stage 1: standalone validation CLI only (no mixxx-lib
+# integration yet -- see src/videoengine/CMakeLists.txt and
+# milestone_12_video_spec_addendum.md at the repo root for the full staged
+# plan). Same shape as AI_STEM_SEPARATION above: off by default, points at
+# a separately-built dependency install kept outside MIXXX_VCPKG_ROOT (this
+# repo's own vcpkg manifest has no gstreamer entry; building it requires a
+# fresh, project-scoped vcpkg checkout -- the pinned buildenv bundle's own
+# vcpkg registry is too old to build GStreamer's dependency chain against
+# the current Xcode SDK, see the addendum doc's Stage 1 write-up).
+set(
+  VIDEO_ENGINE_GSTREAMER_ROOT
+  ""
+  CACHE PATH
+  "Path to a separately-built GStreamer install (arm64-osx triplet) for VIDEO_ENGINE"
+)
+if(VIDEO_ENGINE_GSTREAMER_ROOT)
+  find_package(PkgConfig QUIET)
+  if(PkgConfig_FOUND)
+    set(ENV{PKG_CONFIG_PATH} "${VIDEO_ENGINE_GSTREAMER_ROOT}/lib/pkgconfig:${VIDEO_ENGINE_GSTREAMER_ROOT}/share/pkgconfig")
+    pkg_check_modules(GSTREAMER QUIET
+        gstreamer-1.0
+        gstreamer-video-1.0
+        gstreamer-app-1.0
+        gstreamer-gl-1.0
+        gstreamer-controller-1.0
+        gstreamer-codecparsers-1.0
+        gstreamer-audio-1.0
+        gstreamer-pbutils-1.0
+        gstreamer-riff-1.0
+        gstreamer-rtp-1.0
+    )
+  endif()
+endif()
+default_option(
+  VIDEO_ENGINE
+  "M12 native video engine (GStreamer-based) - standalone validation CLI only, Stage 1"
+  "GSTREAMER_FOUND"
+)
+if(VIDEO_ENGINE)
+  if(NOT GSTREAMER_FOUND)
+    message(FATAL_ERROR "VIDEO_ENGINE requires a GStreamer install (set -DVIDEO_ENGINE_GSTREAMER_ROOT=<path>)")
+  endif()
+  add_subdirectory(src/videoengine)
+
+  # Stage 3b: link the minimal proven engine (VideoEngineManager, owning
+  # GStreamer init + the coreelements/videotestsrc/videoconvertscale/app
+  # plugin set already validated end-to-end by
+  # mixxx-videoengine-qml-bridge-test) into mixxx-lib itself. Still
+  # opt-in-only (VIDEO_ENGINE stays default OFF); everything is guarded by
+  # __VIDEO_ENGINE__, mirroring __AI_STEM_SEPARATION__'s convention above.
+  set(VIDEO_ENGINE_PLUGIN_DIR "${VIDEO_ENGINE_GSTREAMER_ROOT}/lib/gstreamer-1.0")
+  target_compile_definitions(mixxx-lib PUBLIC __VIDEO_ENGINE__)
+  target_compile_options(mixxx-lib PRIVATE ${GSTREAMER_CFLAGS_OTHER})
+  target_include_directories(mixxx-lib PRIVATE ${GSTREAMER_INCLUDE_DIRS})
+  target_sources(mixxx-lib PRIVATE src/library/videoengine/videoenginemanager.cpp)
+  # PUBLIC, not PRIVATE: mixxx-lib is a static library, and CMake only
+  # propagates target_link_directories' search path to a static lib's
+  # consumers (the final mixxx executable) via PUBLIC/INTERFACE scope --
+  # the plain library *names* added via target_link_libraries above
+  # propagate automatically either way, but this -L path does not, which
+  # caused "library 'gstapp-1.0' not found" at the final mixxx link step
+  # even though mixxx-lib.a itself built fine (a static archive step never
+  # needs to resolve external symbols, so the missing search path only
+  # shows up one step later, at the real executable link).
+  target_link_directories(mixxx-lib PUBLIC ${GSTREAMER_LIBRARY_DIRS})
+  # Stage 3d adds compositor (crossfade), playback+typefindfunctions
+  # (decodebin, for loading real per-deck video files), isomp4/applemedia/
+  # videoparsersbad (mp4 container + hardware h264/h265 decode, the
+  # realistic common case for a user-provided clip), and y4m (used by
+  # videoenginemanager_test.cpp to generate small, license-free,
+  # decoder-free raw test fixtures rather than needing a committed binary
+  # video asset).
+  target_link_libraries(mixxx-lib PRIVATE
+      "${VIDEO_ENGINE_PLUGIN_DIR}/libgstcoreelements.a"
+      "${VIDEO_ENGINE_PLUGIN_DIR}/libgstvideotestsrc.a"
+      "${VIDEO_ENGINE_PLUGIN_DIR}/libgstvideoconvertscale.a"
+      "${VIDEO_ENGINE_PLUGIN_DIR}/libgstapp.a"
+      "${VIDEO_ENGINE_PLUGIN_DIR}/libgstcompositor.a"
+      "${VIDEO_ENGINE_PLUGIN_DIR}/libgstplayback.a"
+      "${VIDEO_ENGINE_PLUGIN_DIR}/libgsttypefindfunctions.a"
+      "${VIDEO_ENGINE_PLUGIN_DIR}/libgstisomp4.a"
+      "${VIDEO_ENGINE_PLUGIN_DIR}/libgstapplemedia.a"
+      "${VIDEO_ENGINE_PLUGIN_DIR}/libgstvideoparsersbad.a"
+      "${VIDEO_ENGINE_PLUGIN_DIR}/libgsty4m.a"
+      ${GSTREAMER_LIBRARIES}
+  )
+  if(APPLE)
+    target_link_libraries(mixxx-lib PRIVATE
+        "-framework Cocoa"
+        "-framework CoreFoundation"
+        "-framework CoreServices"
+        "-framework Security"
+        "-framework Accelerate"
+        "-framework OpenGL"
+        "-framework CoreVideo"
+        "-framework CoreMedia"
+        "-framework AVFoundation"
+        "-framework QuartzCore"
+        "-framework IOSurface"
+        "-framework Metal"
+        "-framework VideoToolbox"
+    )
+  endif()
+
+  if(BUILD_TESTING)
+    target_sources(mixxx-test PRIVATE src/test/videoenginemanager_test.cpp)
+  endif()
+
+  # mixxx-qml-lib does NOT link mixxx-lib, so the PUBLIC __VIDEO_ENGINE__
+  # definition above never reaches it -- qmlapplication.cpp (compiled as
+  # part of mixxx-qml-lib) needs this defined independently for its own
+  # seeding calls (QmlVideoEngineProxy, QmlVideoPreviewItem), same
+  # reasoning as __AI_STEM_SEPARATION__ above.
+  #
+  # Stage 3g: QmlVideoPreviewItem no longer calls the GStreamer API
+  # directly -- it polls VideoEngineManager::grabPreviewFrame() (a plain
+  # QImage-returning method), so mixxx-qml-lib no longer needs GStreamer
+  # headers/libs of its own the way Stage 3c's original standalone
+  # preview pipeline did.
+  if(TARGET mixxx-qml-lib)
+    target_compile_definitions(mixxx-qml-lib PUBLIC __VIDEO_ENGINE__)
+  endif()
+endif()
 
 # SoundTouch
 find_package(SoundTouch 2.1.2 REQUIRED)

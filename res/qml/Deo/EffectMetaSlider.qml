@@ -48,12 +48,15 @@ Item {
         value: metaControl.parameter
 
         handle: Rectangle {
-            width: 10
-            height: 18
-            radius: 2
+            // 8x17, radius 4, accentColor -- matching the user's reference
+            // mockup's handle exactly (was a hardcoded white 10x18 pill,
+            // radius 2).
+            width: 8
+            height: 17
+            radius: 4
             border.color: Theme.darkGray3
             border.width: 1
-            color: Theme.white
+            color: root.accentColor
 
             x: slider.leftPadding + slider.visualPosition * slider.availableWidth - width / 2
             y: (slider.height - height) / 2

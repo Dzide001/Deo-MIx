@@ -1,24 +1,30 @@
 import QtQuick 2.12
 import QtQuick.Controls 2.12
-import QtQuick.Layouts
 import Mixxx 1.0 as Mixxx
-import Mixxx.Controls 1.0 as MixxxControls
 import "." as Deo
 import ".." as Skin
 import "../Theme"
 
-// Milestone 3 FX rack, restructured per Deo Pro dj_layout_spec.json to
-// match the reference's column layout: a rotated "FX" label, then three
-// parallel columns (dropdowns / sliders / gear icons), each with one row
-// per slot — not one row per slot bundling all three the way stock
-// Skin.EffectSlot lays things out (see git history for that version).
-// Built directly on Mixxx.EffectSlotProxy rather than Skin.EffectSlot so
-// each piece (selector/meta/expand) can live in its own column. Each
-// dropdown row has a small enable toggle to its left, matching the
-// reference's effects-list popup (toggle switch beside each name).
+// Milestone 3 FX rack, rebuilt per the user's reference mockup
+// (EffectsSectionMockup.qml) as a plain Item with the mockup's exact
+// literal coordinates (it was drawn at DA-upper's real allocated size,
+// 252x108, so these numbers are direct pixel targets, not a proportion to
+// rederive) rather than QtQuick Layouts. This lets every element sit at
+// the mockup's exact drawn position without fighting GridLayout's
+// shared-column-width behavior.
 //
-// Row 1 is Backspin; rows 2-3 are two real slots. unitNumber permanently
-// routes to this deck's channel via group_[ChannelN]_enable.
+// All three rows are real effect slots (1/2/3 of this unit's 4 available
+// slots, per effects/defs.h's kNumEffectsPerUnit) -- row 1 used to be a
+// dedicated, non-swappable Backspin trigger, but per explicit user
+// decision that felt broken next to rows 2/3's real dropdowns (clicking
+// it never opened a popup like the others do); Backspin itself (a real
+// physics-based transport effect, not a pluggable EffectProcessor -- see
+// CustomPadSection.qml) moved to a real pad there instead. unitNumber
+// permanently routes to this deck's channel via group_[ChannelN]_enable.
+// Per explicit user decision, the real enable-toggle for all three slots
+// (a working effect on/off switch) is kept even though the mockup didn't
+// draw it -- fit into the small gap between the rotated label and the
+// effect dropdown.
 Item {
     id: root
 
@@ -26,13 +32,42 @@ Item {
     required property int unitNumber
     required property color accentColor
 
+    // Fixed authored canvas, matching EffectsSectionMockup.qml exactly --
+    // DeckPanel.qml scales this to fit the real allocated box (a Scale
+    // transform, not anchors.fill) rather than assuming the real box
+    // already equals 252x108.
+    height: 108
+    width: 252
+
     readonly property bool trackLoaded: trackLoadedControl.value > 0
     readonly property Mixxx.EffectSlotProxy slot1: Mixxx.EffectsManager.getEffectSlot(unitNumber, 1)
     readonly property Mixxx.EffectSlotProxy slot2: Mixxx.EffectsManager.getEffectSlot(unitNumber, 2)
-    property int expandedSlot: 0 // 0 = none, 1 or 2 = that slot's parameters shown
+    readonly property Mixxx.EffectSlotProxy slot3: Mixxx.EffectsManager.getEffectSlot(unitNumber, 3)
+    property int expandedSlot: 0 // 0 = none, 1/2/3 = that slot's parameters shown
 
-    implicitWidth: 155
-    implicitHeight: mainColumn.implicitHeight
+    // Row/column geometry, taken directly from the latest
+    // EffectsSectionMockup.qml (combo narrowed/shifted to make room for a
+    // wider enable-toggle, sliders now real controls at their own
+    // y/height rather than filling the whole row).
+    readonly property real row1Y: 5
+    readonly property real row2Y: 38
+    readonly property real row3Y: 71
+    readonly property real rowHeight: 27
+    readonly property real labelX: 3
+    readonly property real labelWidth: 18
+    readonly property real toggleX: 31
+    readonly property real toggleWidth: 17
+    readonly property real comboX: 58
+    readonly property real comboWidth: 82
+    readonly property real sliderX: 154
+    readonly property real sliderWidth: 61
+    readonly property real sliderHeight: 19
+    readonly property real slider1Y: 9
+    readonly property real slider2Y: 43
+    readonly property real slider3Y: 75
+    readonly property real gearX: 224
+    readonly property real gearWidth: 24
+
     enabled: root.trackLoaded
     opacity: enabled ? 1.0 : 0.4
 
@@ -57,14 +92,6 @@ Item {
     Deo.CuratedEffectsModel {
         id: curatedEffects
     }
-    ListModel {
-        id: backspinOnlyModel
-
-        ListElement {
-            display: "Backspin"
-            effectId: "backspin"
-        }
-    }
 
     function syncComboBox(comboBox, slot) {
         const rowCount = comboBox.model.rowCount();
@@ -77,222 +104,233 @@ Item {
         comboBox.currentIndex = -1;
     }
 
-    ColumnLayout {
-        id: mainColumn
+    // Rotated "FX" label on the left edge.
+    Item {
+        height: root.height
+        width: root.labelWidth
+        x: root.labelX
+        y: 0
 
-        anchors.fill: parent
-        spacing: 4
-
-        RowLayout {
-            Layout.fillWidth: true
-            spacing: 2
-
-            // Rotated "FX" label on the left edge.
-            Item {
-                Layout.preferredWidth: 14
-                Layout.fillHeight: true
-
-                Label {
-                    anchors.centerIn: parent
-                    color: Theme.deckTextSecondary
-                    font.bold: true
-                    font.family: Theme.fontFamily
-                    font.pixelSize: 10
-                    rotation: -90
-                    text: "FX"
-                }
-            }
-            // Dropdowns column: each row is a small enable toggle beside
-            // the effect selector, matching the reference's effects list.
-            ColumnLayout {
-                Layout.preferredWidth: 76
-                spacing: 2
-
-                RowLayout {
-                    Layout.fillWidth: true
-                    spacing: 2
-
-                    // Backspin is a real, physics-based transport effect
-                    // (see engine/controls/ratecontrol.cpp updateBackspin())
-                    // — a continuous speed ramp from forward playback
-                    // through zero to a fast reverse and back, not a simple
-                    // reverse flip and not an EffectProcessor plugin
-                    // (those never get access to playback position/speed,
-                    // only an already-rendered forward-playing buffer).
-                    // backspin_activate is a one-shot trigger, not a
-                    // hold/release control.
-                    Skin.ControlButton {
-                        Layout.preferredWidth: 16
-                        Layout.fillHeight: true
-                        activeColor: root.accentColor
-                        enabled: false
-                        group: root.group
-                        key: "backspin_enabled"
-                        text: ""
-                        toggleable: true
-
-                        Mixxx.ControlProxy {
-                            id: backspinActivateControl
-
-                            group: root.group
-                            key: "backspin_activate"
-                        }
-                    }
-                    Item {
-                        Layout.fillWidth: true
-                        Layout.preferredHeight: 24
-
-                        Skin.ComboBox {
-                            id: backspinCombo
-
-                            anchors.fill: parent
-                            currentIndex: 0
-                            model: backspinOnlyModel
-                            textRole: "display"
-                        }
-                        // A real dropdown with a single fixed entry has
-                        // nothing useful to open; this overlay makes the
-                        // whole row a one-shot trigger instead, visually
-                        // consistent with the other two dropdown rows.
-                        MouseArea {
-                            anchors.fill: parent
-
-                            onClicked: backspinActivateControl.trigger()
-                        }
-                    }
-                }
-                RowLayout {
-                    Layout.fillWidth: true
-                    spacing: 2
-
-                    Skin.ControlButton {
-                        Layout.preferredWidth: 16
-                        Layout.fillHeight: true
-                        activeColor: root.accentColor
-                        group: root.slot1.group
-                        key: "enabled"
-                        text: ""
-                        toggleable: true
-                    }
-                    Skin.ComboBox {
-                        id: slot1Selector
-
-                        Layout.fillWidth: true
-                        Layout.preferredHeight: 24
-                        model: curatedEffects
-                        textRole: "display"
-
-                        Component.onCompleted: root.syncComboBox(slot1Selector, root.slot1)
-                        onActivated: index => {
-                            root.slot1.effectId = model.get(index).effectId;
-                        }
-
-                        Connections {
-                            function onEffectIdChanged() {
-                                root.syncComboBox(slot1Selector, root.slot1);
-                            }
-
-                            target: root.slot1
-                        }
-                    }
-                }
-                RowLayout {
-                    Layout.fillWidth: true
-                    spacing: 2
-
-                    Skin.ControlButton {
-                        Layout.preferredWidth: 16
-                        Layout.fillHeight: true
-                        activeColor: root.accentColor
-                        group: root.slot2.group
-                        key: "enabled"
-                        text: ""
-                        toggleable: true
-                    }
-                    Skin.ComboBox {
-                        id: slot2Selector
-
-                        Layout.fillWidth: true
-                        Layout.preferredHeight: 24
-                        model: curatedEffects
-                        textRole: "display"
-
-                        Component.onCompleted: root.syncComboBox(slot2Selector, root.slot2)
-                        onActivated: index => {
-                            root.slot2.effectId = model.get(index).effectId;
-                        }
-
-                        Connections {
-                            function onEffectIdChanged() {
-                                root.syncComboBox(slot2Selector, root.slot2);
-                            }
-
-                            target: root.slot2
-                        }
-                    }
-                }
-            }
-            // Sliders column: metaknob for each real slot, exposed as a
-            // horizontal slider to match the reference (stock
-            // Skin.EffectSlot uses a knob for this instead).
-            ColumnLayout {
-                Layout.preferredWidth: 55
-                spacing: 2
-
-                Item {
-                    // Backspin has no continuous parameter.
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: 24
-                }
-                Deo.EffectMetaSlider {
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: 24
-                    accentColor: root.accentColor
-                    group: root.slot1.group
-                }
-                Deo.EffectMetaSlider {
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: 24
-                    accentColor: root.accentColor
-                    group: root.slot2.group
-                }
-            }
-            // Gear column: toggles the shared expanded-parameters row
-            // below for that slot.
-            ColumnLayout {
-                Layout.preferredWidth: 18
-                spacing: 2
-
-                Item {
-                    // Backspin has no parameters to expand.
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: 24
-                }
-                Skin.Button {
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: 24
-                    activeColor: root.accentColor
-                    highlight: root.expandedSlot === 1
-                    text: "⚙"
-
-                    onClicked: root.expandedSlot = (root.expandedSlot === 1 ? 0 : 1)
-                }
-                Skin.Button {
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: 24
-                    activeColor: root.accentColor
-                    highlight: root.expandedSlot === 2
-                    text: "⚙"
-
-                    onClicked: root.expandedSlot = (root.expandedSlot === 2 ? 0 : 2)
-                }
-            }
+        Label {
+            anchors.centerIn: parent
+            color: Theme.deckTextSecondary
+            font.bold: true
+            font.family: Theme.fontFamily
+            font.pixelSize: 10
+            rotation: -90
+            text: "FX"
         }
-        Deo.EffectParametersRow {
-            Layout.fillWidth: true
-            accentColor: root.accentColor
-            slot: root.expandedSlot === 1 ? root.slot1 : root.expandedSlot === 2 ? root.slot2 : null
-            visible: root.expandedSlot !== 0
+    }
+
+    // Row 1: real effect slot 3 -- was a dedicated, non-swappable
+    // Backspin trigger; per explicit user decision that read as broken
+    // next to rows 2/3's real dropdowns, so this is now a real slot
+    // exactly like them (Backspin moved to a real pad in
+    // CustomPadSection.qml instead).
+    Skin.ControlButton {
+        activeColor: root.accentColor
+        group: root.slot3.group
+        height: root.rowHeight
+        key: "enabled"
+        text: ""
+        toggleable: true
+        width: root.toggleWidth
+        x: root.toggleX
+        y: root.row1Y
+    }
+    Skin.ComboBox {
+        id: slot3Selector
+
+        // Same height as everything else in the row -- no +8/-4
+        // compensation (see rows 2/3's comment for why that trick was
+        // removed).
+        height: root.rowHeight
+        model: curatedEffects
+        textRole: "display"
+        width: root.comboWidth
+        x: root.comboX
+        y: root.row1Y
+
+        Component.onCompleted: root.syncComboBox(slot3Selector, root.slot3)
+        onActivated: index => {
+            root.slot3.effectId = model.get(index).effectId;
         }
+
+        Connections {
+            function onEffectIdChanged() {
+                root.syncComboBox(slot3Selector, root.slot3);
+            }
+
+            target: root.slot3
+        }
+    }
+    Deo.EffectMetaSlider {
+        accentColor: root.accentColor
+        group: root.slot3.group
+        height: root.sliderHeight
+        width: root.sliderWidth
+        x: root.sliderX
+        y: root.slider1Y
+    }
+    Skin.Button {
+        activeColor: root.accentColor
+        height: root.rowHeight
+        highlight: root.expandedSlot === 3
+        text: ""
+        width: root.gearWidth
+        x: root.gearX
+        y: root.row1Y
+
+        onClicked: root.expandedSlot = (root.expandedSlot === 3 ? 0 : 3)
+
+        Image {
+            anchors.centerIn: parent
+            fillMode: Image.PreserveAspectFit
+            height: 11
+            source: "../../../images/gear.png"
+            width: 11
+        }
+    }
+
+    // Row 2: real effect slot 1.
+    Skin.ControlButton {
+        activeColor: root.accentColor
+        group: root.slot1.group
+        height: root.rowHeight
+        key: "enabled"
+        text: ""
+        toggleable: true
+        width: root.toggleWidth
+        x: root.toggleX
+        y: root.row2Y
+    }
+    Skin.ComboBox {
+        id: slot1Selector
+
+        // Same height as everything else in the row -- no +8/-4
+        // compensation (see the backspin row's comment above for why
+        // that trick was removed).
+        height: root.rowHeight
+        model: curatedEffects
+        textRole: "display"
+        width: root.comboWidth
+        x: root.comboX
+        y: root.row2Y
+
+        Component.onCompleted: root.syncComboBox(slot1Selector, root.slot1)
+        onActivated: index => {
+            root.slot1.effectId = model.get(index).effectId;
+        }
+
+        Connections {
+            function onEffectIdChanged() {
+                root.syncComboBox(slot1Selector, root.slot1);
+            }
+
+            target: root.slot1
+        }
+    }
+    Deo.EffectMetaSlider {
+        accentColor: root.accentColor
+        group: root.slot1.group
+        height: root.sliderHeight
+        width: root.sliderWidth
+        x: root.sliderX
+        y: root.slider2Y
+    }
+    Skin.Button {
+        activeColor: root.accentColor
+        height: root.rowHeight
+        highlight: root.expandedSlot === 1
+        text: ""
+        width: root.gearWidth
+        x: root.gearX
+        y: root.row2Y
+
+        onClicked: root.expandedSlot = (root.expandedSlot === 1 ? 0 : 1)
+
+        Image {
+            anchors.centerIn: parent
+            fillMode: Image.PreserveAspectFit
+            height: 11
+            source: "../../../images/gear.png"
+            width: 11
+        }
+    }
+
+    // Row 3: real effect slot 2.
+    Skin.ControlButton {
+        activeColor: root.accentColor
+        group: root.slot2.group
+        height: root.rowHeight
+        key: "enabled"
+        text: ""
+        toggleable: true
+        width: root.toggleWidth
+        x: root.toggleX
+        y: root.row3Y
+    }
+    Skin.ComboBox {
+        id: slot2Selector
+
+        // Same height as everything else in the row -- no +8/-4
+        // compensation (see the backspin row's comment above for why
+        // that trick was removed).
+        height: root.rowHeight
+        model: curatedEffects
+        textRole: "display"
+        width: root.comboWidth
+        x: root.comboX
+        y: root.row3Y
+
+        Component.onCompleted: root.syncComboBox(slot2Selector, root.slot2)
+        onActivated: index => {
+            root.slot2.effectId = model.get(index).effectId;
+        }
+
+        Connections {
+            function onEffectIdChanged() {
+                root.syncComboBox(slot2Selector, root.slot2);
+            }
+
+            target: root.slot2
+        }
+    }
+    Deo.EffectMetaSlider {
+        accentColor: root.accentColor
+        group: root.slot2.group
+        height: root.sliderHeight
+        width: root.sliderWidth
+        x: root.sliderX
+        y: root.slider3Y
+    }
+    Skin.Button {
+        activeColor: root.accentColor
+        height: root.rowHeight
+        highlight: root.expandedSlot === 2
+        text: ""
+        width: root.gearWidth
+        x: root.gearX
+        y: root.row3Y
+
+        onClicked: root.expandedSlot = (root.expandedSlot === 2 ? 0 : 2)
+
+        Image {
+            anchors.centerIn: parent
+            fillMode: Image.PreserveAspectFit
+            height: 11
+            source: "../../../images/gear.png"
+            width: 11
+        }
+    }
+
+    Deo.EffectParametersRow {
+        accentColor: root.accentColor
+        height: 50
+        slot: root.expandedSlot === 1 ? root.slot1 : root.expandedSlot === 2 ? root.slot2 : root.expandedSlot === 3 ? root.slot3 : null
+        visible: root.expandedSlot !== 0
+        width: root.width
+        x: 0
+        y: root.row3Y + root.rowHeight
     }
 }

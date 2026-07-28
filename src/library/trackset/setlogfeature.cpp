@@ -107,6 +107,18 @@ SetlogFeature::SetlogFeature(
 
     // initialized in a new generic slot(get new history playlist purpose)
     slotGetNewPlaylist();
+
+    // Recording play history must not depend on whether a skin ever binds
+    // the legacy WLibrary widget for this feature (bindLibraryWidget() below
+    // is only called by the classic QWidget skin parser and by
+    // Mixxx.LegacyLibraryItem in QML -- the Deo QML skin's SourceTree.qml
+    // uses neither, which previously meant no history was recorded at all
+    // under it). Connecting here instead makes history tracking work
+    // unconditionally, independent of which skin/UI is active.
+    connect(&PlayerInfo::instance(),
+            &PlayerInfo::currentPlayingTrackChanged,
+            this,
+            &SetlogFeature::slotPlayingTrackChanged);
 }
 
 SetlogFeature::~SetlogFeature() {
@@ -124,10 +136,6 @@ QVariant SetlogFeature::title() {
 void SetlogFeature::bindLibraryWidget(
         WLibrary* pLibraryWidget, KeyboardEventFilter* pKeyboard) {
     BasePlaylistFeature::bindLibraryWidget(pLibraryWidget, pKeyboard);
-    connect(&PlayerInfo::instance(),
-            &PlayerInfo::currentPlayingTrackChanged,
-            this,
-            &SetlogFeature::slotPlayingTrackChanged);
     m_pLibraryWidget = QPointer(pLibraryWidget);
 }
 

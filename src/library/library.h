@@ -77,6 +77,15 @@ class Library: public QObject {
     /// Needed for exposing models to QML
     LibraryTableModel* trackTableModel() const;
 
+    /// AutoDJFeature's constructor registers global "[AutoDJ]"-keyed
+    /// ControlObjects via its AutoDJProcessor -- unlike the other
+    /// LibraryFeature subclasses (Playlists/Crates/Recording/Analysis/...),
+    /// it must not be constructed twice, so QML-facing code needs to reuse
+    /// this instance rather than making its own (see QmlLibraryAutoDJSource).
+    AutoDJFeature* getAutoDJFeature() const {
+        return m_pAutoDJFeature.get();
+    }
+
     bool isTrackIdInCurrentLibraryView(const TrackId& trackId);
 
     int getTrackTableRowHeight() const {

@@ -1,5 +1,6 @@
 #include "engine/enginemixer.h"
 
+#include <cmath>
 #include <memory>
 
 #include "audio/types.h"
@@ -121,6 +122,10 @@ EngineMixer::EngineMixer(UserSettingsPointer pConfig,
                   ConfigKey(EngineXfader::kXfaderConfigKey, "xFaderReverse"))),
           m_pHeadSplitEnabled(std::make_unique<ControlPushButton>(
                   ConfigKey(group, "headSplit"), true, 0.0)),
+          m_pMainLimiterEnabled(std::make_unique<ControlPushButton>(
+                  ConfigKey(group, "limiter_enabled"), true, 0.0)),
+          m_pMainLimiterThreshold(std::make_unique<ControlPotmeter>(
+                  ConfigKey(group, "limiter_threshold"), 0.1, 1.0)),
 
           m_pKeylockEngine(std::make_unique<ControlObject>(
                   ConfigKey(kAppGroup, QStringLiteral("keylock_engine")),
@@ -190,6 +195,13 @@ EngineMixer::EngineMixer(UserSettingsPointer pConfig,
 
     m_pHeadSplitEnabled->setButtonMode(mixxx::control::ButtonMode::Toggle);
     m_pHeadSplitEnabled->set(0.0);
+
+    // Off by default -- this is a new fork feature, existing sets/sessions
+    // should not have their master sound altered without an explicit opt-in.
+    m_pMainLimiterEnabled->setButtonMode(mixxx::control::ButtonMode::Toggle);
+    m_pMainLimiterEnabled->set(0.0);
+    m_pMainLimiterThreshold->setDefaultValue(0.98);
+    m_pMainLimiterThreshold->set(0.98);
 
     // zero out otherwise uninitialized buffers
     m_head.clear();
@@ -777,6 +789,7 @@ void EngineMixer::process(const std::size_t bufferSize) {
 
     if (mainEnabled) {
         m_pMainDelay->process(m_main.data(), bufferSize);
+        applyMainLimiter(bufferSize);
     } else {
         m_main.clear(bufferSize);
     }
@@ -790,6 +803,27 @@ void EngineMixer::process(const std::size_t bufferSize) {
     // We're close to the end of the callback. Wake up the engine worker
     // scheduler so that it runs the workers.
     m_pWorkerScheduler->runWorkers();
+}
+
+void EngineMixer::applyMainLimiter(std::size_t bufferSize) {
+    if (!m_pMainLimiterEnabled->toBool()) {
+        return;
+    }
+    const CSAMPLE threshold = static_cast<CSAMPLE>(m_pMainLimiterThreshold->get());
+    if (threshold <= 0 || threshold >= CSAMPLE_PEAK) {
+        return;
+    }
+    const CSAMPLE headroom = CSAMPLE_PEAK - threshold;
+    CSAMPLE* pBuffer = m_main.data();
+    for (std::size_t i = 0; i < bufferSize; ++i) {
+        const CSAMPLE sample = pBuffer[i];
+        const CSAMPLE absSample = std::fabs(sample);
+        if (absSample > threshold) {
+            const CSAMPLE over = absSample - threshold;
+            const CSAMPLE compressed = threshold + headroom * std::tanh(over / headroom);
+            pBuffer[i] = std::copysign(compressed, sample);
+        }
+    }
 }
 
 void EngineMixer::applyMainEffects(std::size_t bufferSize) {

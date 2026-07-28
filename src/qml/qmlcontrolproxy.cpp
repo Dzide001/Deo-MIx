@@ -9,12 +9,22 @@ namespace qml {
 namespace {
 constexpr double kDefaultValue = 0.0;
 constexpr double kDefaultParameter = 0.0;
+// M8: how long the "driven by hardware" cue stays lit after a single
+// controller-mapping-originated value change, before decaying back off.
+constexpr int kHardwareDrivenDecayMs = 200;
 } // namespace
 
 QmlControlProxy::QmlControlProxy(QObject* parent)
         : QObject(parent),
           m_isComponentComplete(false),
-          m_pControlProxy(nullptr) {
+          m_pControlProxy(nullptr),
+          m_hardwareDriven(false) {
+    m_hardwareDrivenDecayTimer.setSingleShot(true);
+    m_hardwareDrivenDecayTimer.setInterval(kHardwareDrivenDecayMs);
+    connect(&m_hardwareDrivenDecayTimer, &QTimer::timeout, this, [this]() {
+        m_hardwareDriven = false;
+        emit hardwareDrivenChanged(false);
+    });
 }
 
 void QmlControlProxy::componentComplete() {
@@ -28,6 +38,10 @@ bool QmlControlProxy::isKeyValid() const {
 
 bool QmlControlProxy::isInitialized() const {
     return m_pControlProxy != nullptr;
+}
+
+bool QmlControlProxy::isHardwareDriven() const {
+    return m_hardwareDriven;
 }
 
 void QmlControlProxy::setGroup(const QString& group) {
@@ -174,12 +188,27 @@ void QmlControlProxy::reinitializeFromKey() {
         emit initializedChanged(true);
     }
     m_pControlProxy->connectValueChanged(this, &QmlControlProxy::slotControlProxyValueChanged);
+    connect(m_pControlProxy.get(),
+            &ControlProxy::valueChangedFromHardware,
+            this,
+            &QmlControlProxy::slotHardwareDriven);
     slotControlProxyValueChanged(m_pControlProxy->get());
 }
 
 void QmlControlProxy::slotControlProxyValueChanged(double newValue) {
     emit valueChanged(newValue);
     emit parameterChanged(m_pControlProxy->getParameter());
+}
+
+void QmlControlProxy::slotHardwareDriven(double newValue) {
+    Q_UNUSED(newValue);
+    if (!m_hardwareDriven) {
+        m_hardwareDriven = true;
+        emit hardwareDrivenChanged(true);
+    }
+    // (Re)start the decay window on every hardware-originated change,
+    // including repeated ones while a knob keeps turning.
+    m_hardwareDrivenDecayTimer.start();
 }
 
 void QmlControlProxy::trigger() {

@@ -43,6 +43,13 @@ class ControllerManager : public QObject {
     /// Prevent other parts of Mixxx from having to manually connect to our slots
     void setUpDevices() { emit requestSetUpDevices(); };
 
+    /// Re-enumerates all controller enumerators (MIDI/HID/etc.) and updates
+    /// the controller list, same as what happens once at startup. Manual
+    /// user-triggered rescan, not automatic OS-level hotplug detection --
+    /// see updateControllerList()'s existing warning about synchronizing
+    /// with any UI holding references to Controller objects.
+    void rescanDevices() { emit requestRescanDevices(); };
+
     static QList<QString> getMappingPaths(UserSettingsPointer pConfig);
 
   signals:
@@ -51,6 +58,7 @@ class ControllerManager : public QObject {
     void requestSetUpDevices();
     void requestShutdown();
     void requestInitialize();
+    void requestRescanDevices();
     void mappingApplied(bool applied);
 
   public slots:
@@ -69,6 +77,9 @@ class ControllerManager : public QObject {
     void slotShutdown();
     /// Calls poll() on all devices that have isPolling() true.
     void slotPollDevices();
+    /// Manual rescan trigger, marshaled onto the ControllerManager thread
+    /// via requestRescanDevices() the same way slotSetUpDevices() is.
+    void slotRescanDevices();
 
   private:
     void updateControllerList();

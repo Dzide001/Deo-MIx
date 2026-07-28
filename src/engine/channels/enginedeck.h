@@ -88,6 +88,25 @@ class EngineDeck : public EngineChannel, public AudioDestination {
 #ifdef __STEM__
     // Process multiple channels and mix them together into the passed buffer
     void processStem(CSAMPLE* pOutput, const std::size_t bufferSize);
+    // Stem metadata for a freshly loaded track is often not parsed yet at
+    // EngineBuffer::trackLoaded time (it's imported asynchronously once the
+    // SoundSource is actually opened) -- this re-reads it once
+    // Track::stemsUpdated fires for real data, instead of stem_count being
+    // permanently stuck at whatever (usually 0) getStemInfo() returned at
+    // load time.
+    void slotStemsUpdated();
+    // M8: registers "stem_acapella"/"stem_instrumental" as real, addressable
+    // ControlObjects (rather than the composite mute pattern living only in
+    // a QML onClicked handler) so a controller mapping has something to
+    // bind a pad/button to -- see milestone_8_controller_support_spec.md's
+    // "New custom controls needed" section.
+    void slotStemAcapella(double v);
+    void slotStemInstrumental(double v);
+    // Stem file track order isn't guaranteed by the format; finds the
+    // loaded track's stem index whose label contains pattern
+    // (case-insensitive), or -1 if not found/no track loaded. Mirrors
+    // StemPads.qml's findStemIndex().
+    int findStemIndexByLabel(const QString& pattern) const;
 #endif
 
     std::vector<ChannelHandleAndGroup> m_stems;
@@ -101,8 +120,11 @@ class EngineDeck : public EngineChannel, public AudioDestination {
     // Stem buffer used to retrieve all the channel to mix together
     mixxx::SampleBuffer m_stemBuffer;
     std::unique_ptr<ControlObject> m_pStemCount;
+    TrackPointer m_pLoadedTrack;
     std::vector<std::unique_ptr<ControlPotmeter>> m_stemGain;
     std::vector<std::unique_ptr<ControlPushButton>> m_stemMute;
+    std::unique_ptr<ControlPushButton> m_pStemAcapella;
+    std::unique_ptr<ControlPushButton> m_pStemInstrumental;
     std::vector<std::unique_ptr<EngineVuMeter>> m_stemVuMeter;
     bool m_stemClonedState;
 #endif

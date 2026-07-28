@@ -1,25 +1,21 @@
-<!DOCTYPE RCC>
-<RCC version="1.0">
+<RCC>
     <qresource prefix="/">
         <file>../LICENSE</file>
         <file>images/library/ic_library_drag_and_drop.svg</file>
-      <!-- open/closed lock icons for BPM button -->
         <file>images/library/ic_library_locked.svg</file>
         <file>images/library/ic_library_unlocked.svg</file>
-      <!-- lock icon for crates, playlists & history -->
         <file>images/library/ic_library_locked_tracklist.svg</file>
         <file>images/library/cover_default.svg</file>
-      <!-- icons for library side bar -->
         <file>images/library/ic_library_autodj.svg</file>
         <file>images/library/ic_library_banshee.svg</file>
-        <file>images/library/ic_library_computer.svg</file> <!-- from Gnome high contrast icons LGPL 2.1 -->
+        <file>images/library/ic_library_computer.svg</file>
         <file>images/library/ic_library_crates.svg</file>
         <file>images/library/ic_library_cross_grey.svg</file>
         <file>images/library/ic_library_cross_orange.svg</file>
         <file>images/library/ic_library_history.svg</file>
         <file>images/library/ic_library_history_current.svg</file>
         <file>images/library/ic_library_itunes.svg</file>
-        <file>images/library/ic_library_tracks.svg</file> <!-- from Gnome high contrast icons LGPL 2.1 -->
+        <file>images/library/ic_library_tracks.svg</file>
         <file>images/library/ic_library_playlist.svg</file>
         <file>images/library/ic_library_prepare.svg</file>
         <file>images/library/ic_library_preview_pause.svg</file>
@@ -29,20 +25,17 @@
         <file>images/library/ic_library_traktor.svg</file>
         <file>images/library/ic_library_rekordbox.svg</file>
         <file>images/library/ic_library_serato.svg</file>
-      <!-- logo and icons for 'About' dialog -->
         <file>images/mixxx_logo.svg</file>
         <file>images/icons/scalable/apps/mixxx.svg</file>
         <file>images/heart_icon_light.svg</file>
         <file>images/heart_icon_dark.svg</file>
         <file>images/heart_icon_rainbow.svg</file>
-        <file>images/mixxx-icon-logo-symbolic.svg</file> <!-- default launch image -->
-        <file>images/mixxx-icon-logo-christmas.svg</file> <!-- christmas launch image -->
+        <file>images/mixxx-icon-logo-symbolic.svg</file>
+        <file>images/mixxx-icon-logo-christmas.svg</file>
         <file>images/skin_preview_placeholder.png</file>
         <file>images/ic_checkmark.svg</file>
         <file>images/ic_delete.svg</file>
-      <!-- keywheel dialog image -->
         <file>images/keywheel/keywheel.svg</file>
-      <!-- dark icon set for preferences -->
         <file>images/preferences/dark/ic_preferences_autodj.svg</file>
         <file>images/preferences/dark/ic_preferences_bpmdetect.svg</file>
         <file>images/preferences/dark/ic_preferences_broadcast.svg</file>
@@ -69,7 +62,6 @@
         <file>images/preferences/dark/ic_custom.svg</file>
         <file>images/preferences/dark/ic_mixxx_symbolic.svg</file>
         <file>images/preferences/dark/ic_none.svg</file>
-      <!-- light icon set for preferences -->
         <file>images/preferences/light/ic_preferences_autodj.svg</file>
         <file>images/preferences/light/ic_preferences_bpmdetect.svg</file>
         <file>images/preferences/light/ic_preferences_broadcast.svg</file>
@@ -96,14 +88,22 @@
         <file>images/preferences/light/ic_custom.svg</file>
         <file>images/preferences/light/ic_mixxx_symbolic.svg</file>
         <file>images/preferences/light/ic_none.svg</file>
-      <!-- magnifier for the Search button in Search related tracks menu -->
         <file>images/ic_magnifier.svg</file>
-      <!-- skin oversize warning -->
         <file>images/preferences/ic_preferences_warning.svg</file>
         <file>schema.xml</file>
         <file>shaders/filteredsignal.frag</file>
         <file>shaders/passthrough.vert</file>
         <file>shaders/rgbsignal.frag</file>
         <file>shaders/stackedsignal.frag</file>
+        <file>qml/Deo/CustomPadDesignMockup.qml</file>
+        <file>qml/Deo/CustomLoopSectionDesignMockup.qml</file>
+        <file>qml/Deo/EffectsSectionMockup.qml</file>
+        <file>qml/Deo/PadsDesignMockup.qml</file>
+        <file>../images/gear.png</file>
+        <file>qml/Deo/JogwheelDesignMockup.qml</file>
+        <file>qml/Deo/FaderSectionDesignMockup.qml</file>
+        <file>qml/Deo/DeckDesignMockup.qml</file>
+        <file>../images/gear-man-setting-svgrepo-com.svg</file>
+        <file>../images/gear-svgrepo-com.svg</file>
     </qresource>
 </RCC>

@@ -130,6 +130,10 @@ ControllerManager::ControllerManager(UserSettingsPointer pConfig)
             this,
             &ControllerManager::slotSetUpDevices);
     connect(this, &ControllerManager::requestShutdown, this, &ControllerManager::slotShutdown);
+    connect(this,
+            &ControllerManager::requestRescanDevices,
+            this,
+            &ControllerManager::slotRescanDevices);
 
     // Signal that we should run slotInitialize once our event loop has started
     // up. invokeMethod with QueuedConnection will post an event to our event loop,
@@ -208,9 +212,16 @@ void ControllerManager::slotShutdown() {
 
 void ControllerManager::updateControllerList() {
     DEBUG_ASSERT_THIS_QOBJECT_THREAD_AFFINITY();
-    // NOTE: Currently this function is only called on startup. If hotplug is added, changes to the
-    // controller list must be synchronized with dlgprefcontrollers to avoid dangling connections
-    // and possible crashes.
+    // NOTE: Now also called on-demand via rescanDevices()/slotRescanDevices()
+    // (manual user-triggered rescan, not automatic OS-level hotplug), in
+    // addition to startup. Both DlgPrefControllers (legacy widget dialog)
+    // and QmlControllerManagerProxy (QML skin) already connect to
+    // devicesChanged() and rebuild their own device lists in response, so a
+    // no-op rescan (same devices found) safely returns early below without
+    // emitting anything, and a real change safely triggers both listeners
+    // to refresh. If either listener is ever changed to cache raw
+    // Controller* pointers across calls instead of rebuilding from
+    // devicesChanged(), that assumption needs revisiting.
     auto locker = lockMutex(&m_mutex);
     if (m_enumerators.empty()) {
         qWarning() << "updateControllerList called but no enumerators have been added!";
@@ -236,6 +247,12 @@ void ControllerManager::updateControllerList() {
     m_controllers = std::move(newDeviceList);
     locker.unlock();
     emit devicesChanged();
+}
+
+void ControllerManager::slotRescanDevices() {
+    DEBUG_ASSERT_THIS_QOBJECT_THREAD_AFFINITY();
+    qDebug() << "ControllerManager: Rescanning devices";
+    updateControllerList();
 }
 
 QList<Controller*> ControllerManager::getControllers() const {

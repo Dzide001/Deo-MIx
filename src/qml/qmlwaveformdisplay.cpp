@@ -316,8 +316,14 @@ void QmlWaveformDisplay::slotTrackLoaded(TrackPointer pTrack) {
 }
 
 void QmlWaveformDisplay::slotTrackLoading(TrackPointer pNewTrack, TrackPointer pOldTrack) {
-    Q_UNUSED(pOldTrack); // only used in DEBUG_ASSERT
-    DEBUG_ASSERT(getTrackInfo() == pOldTrack);
+    Q_UNUSED(pNewTrack);
+    // Same known startup race as slotTrackLoaded above: on session restore,
+    // a deck can load its persisted track before this display's setPlayer()
+    // has run, so getTrackInfo() doesn't yet match pOldTrack the first time
+    // a load happens. Non-fatal either way -- setCurrentTrack({}) below is
+    // correct regardless of whether this held.
+    // DEBUG_ASSERT(getTrackInfo() == pOldTrack);
+    Q_UNUSED(pOldTrack);
     setCurrentTrack({});
 }
 

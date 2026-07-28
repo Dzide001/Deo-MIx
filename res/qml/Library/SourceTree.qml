@@ -179,6 +179,34 @@ Mixxx.LibrarySourceTree {
         columns: root.defaultColumns
         label: qsTr("Computer")
     }
+    // M7/M10 rough sketch: Auto DJ / History / Analyze / Recordings, same
+    // wrap-the-real-LibraryFeature pattern as the four sources above. These
+    // backends were already registered and working in the C++ Library
+    // object regardless of active skin -- they just had no QML sidebar
+    // entry until now.
+    Mixxx.LibraryAutoDJSource {
+        columns: root.defaultColumns
+        label: qsTr("Auto DJ")
+    }
+    Mixxx.LibraryHistorySource {
+        columns: root.defaultColumns
+        label: qsTr("History")
+    }
+    Mixxx.LibraryAnalyzeSource {
+        columns: root.defaultColumns
+        label: qsTr("Analyze")
+    }
+    Mixxx.LibraryRecordingSource {
+        columns: root.defaultColumns
+        label: qsTr("Recordings")
+    }
+    // Representative external-library entry -- establishes the pattern for
+    // Rhythmbox/Traktor/Serato/Rekordbox/Banshee, not built out exhaustively
+    // in this pass.
+    Mixxx.LibraryITunesSource {
+        columns: root.defaultColumns
+        label: qsTr("iTunes")
+    }
 
     component DefaultDelegate: LibraryComponent.Cell {
         id: cell

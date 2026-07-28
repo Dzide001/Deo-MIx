@@ -10,6 +10,14 @@ AbstractButton {
     property bool highlight: false
     property color normalColor: Theme.buttonNormalColor
     property color pressedColor: activeColor
+    // Alias, not a hardcoded property -- defaults to whatever
+    // Theme.buttonFontPixelSize already was (label's own binding below is
+    // untouched unless a caller explicitly sets this), so every existing
+    // Skin.Button/Skin.ControlButton usage across the skin is unaffected.
+    // Exists because label's font.pixelSize was previously not
+    // overridable per-instance at all, and some pad labels needed a
+    // smaller size to fit their box.
+    property alias labelFontPixelSize: label.font.pixelSize
 
     implicitHeight: 26
     implicitWidth: 52
