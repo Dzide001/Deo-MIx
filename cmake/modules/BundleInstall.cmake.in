@@ -1,9 +1,21 @@
-set(BUNDLE_NAME @BUNDLE_NAME@)
+# Every one of these MUST be quoted. Unquoted, CMake splits the
+# configured value on whitespace into a list, so any space anywhere --
+# in the app name, the source tree path, or a dependency prefix --
+# silently corrupts it:
+#   BUNDLE_NAME "Deo DJ.app"        -> Deo;DJ.app        -> fixup_bundle
+#                                                           "not a valid bundle"
+#   a source path ".../Deo Pro DJ"  -> .../Deo;Pro;DJ    -> dependency dirs and
+#                                                           the entitlements path
+#                                                           both unreadable
+# Quoting is still correct for the two genuine lists (BUNDLE_LIBS,
+# BUNDLE_DIRS): they configure to "a;b;c", and set(X "a;b;c") is exactly
+# how CMake spells a multi-element list.
+set(BUNDLE_NAME "@BUNDLE_NAME@")
 set(BUNDLE_PATH "${CMAKE_INSTALL_PREFIX}/${BUNDLE_NAME}")
-set(BUNDLE_LIBS @BUNDLE_LIBS@)
-set(BUNDLE_DIRS @BUNDLE_DIRS@)
-set(APPLE_CODESIGN_IDENTITY @APPLE_CODESIGN_IDENTITY@)
-set(APPLE_CODESIGN_ENTITLEMENTS @APPLE_CODESIGN_ENTITLEMENTS@)
+set(BUNDLE_LIBS "@BUNDLE_LIBS@")
+set(BUNDLE_DIRS "@BUNDLE_DIRS@")
+set(APPLE_CODESIGN_IDENTITY "@APPLE_CODESIGN_IDENTITY@")
+set(APPLE_CODESIGN_ENTITLEMENTS "@APPLE_CODESIGN_ENTITLEMENTS@")
 
 include(BundleUtilities)
 

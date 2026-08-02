@@ -86,8 +86,17 @@ QString computeResourcePathImpl() {
             qResourcePath = QCoreApplication::applicationDirPath();
         }
 #elif defined(Q_OS_MACOS)
-        else if (mixxxDir.cd("../Resources")) {
+        // Contents/Resources/mixxx, NOT Contents/Resources itself: Qt
+        // reserves <bundle>/Contents/Resources/qml as the bundle's QML
+        // import root, and putting our own QML tree there breaks type
+        // resolution badly enough that the app cannot start (see the
+        // matching comment on MIXXX_INSTALL_DATADIR in CMakeLists.txt).
+        else if (mixxxDir.cd("../Resources/mixxx")) {
             // Release configuration
+            qResourcePath = mixxxDir.absolutePath();
+        } else if (mixxxDir.cd("../Resources")) {
+            // Older layout, kept as a fallback so a bundle built before
+            // the move above still finds its resources.
             qResourcePath = mixxxDir.absolutePath();
         } else {
             // TODO(rryan): What should we do here?

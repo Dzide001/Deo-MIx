@@ -2305,7 +2305,19 @@ if(APPLE AND MACOS_BUNDLE)
     "The macOS app bundle identifier"
   )
   set(MIXXX_INSTALL_PREFIX "${MACOS_BUNDLE_NAME}.app")
-  set(MIXXX_INSTALL_DATADIR "${MIXXX_INSTALL_PREFIX}/Contents/Resources")
+  # Resources go in a "mixxx" SUBDIRECTORY of Contents/Resources, not
+  # directly in it. Qt reserves <bundle>/Contents/Resources/qml as the
+  # bundle's QML import root, so installing our own QML tree straight
+  # into Contents/Resources put every top-level skin file (Slider.qml,
+  # Button.qml, ...) inside that root. The result was a packaged app
+  # that failed to start: Settings/SoundHardware.qml could no longer see
+  # Skin.Slider's `slider` alias ("Cannot assign to non-existent
+  # property"), cascading up through Settings.qml -> TopBar -> main.qml.
+  # Bisected conclusively -- the same binary and the same files work
+  # when the resource path is anything OTHER than that reserved
+  # directory. Upstream never hit this because the QML skin is
+  # experimental and its bundles ship the legacy widget skin.
+  set(MIXXX_INSTALL_DATADIR "${MIXXX_INSTALL_PREFIX}/Contents/Resources/mixxx")
   set(MIXXX_INSTALL_DOCDIR "${MIXXX_INSTALL_DATADIR}")
   set(MIXXX_INSTALL_LICENSEDIR "${MIXXX_INSTALL_DATADIR}/licenses")
 elseif(APPLE AND IOS)
@@ -6070,6 +6082,25 @@ if(APPLE AND MACOS_BUNDLE)
   foreach(PREFIX ${CMAKE_PREFIX_PATH})
     list(APPEND BUNDLE_DIRS "${PREFIX}/lib")
   endforeach()
+  # CMAKE_PREFIX_PATH alone only covers the pinned vcpkg dependency
+  # bundle. This fork additionally links dylibs that live outside it --
+  # whisper.cpp/ggml (pulled in via FetchContent, so they build into the
+  # binary dir) and ONNX Runtime -- and fixup_bundle() cannot resolve an
+  # @rpath entry whose directory it was never told about, which aborts
+  # the whole install ("otool -l failed"). Only appended when the
+  # corresponding feature is actually enabled, so a build without them
+  # doesn't gain bogus search dirs.
+  if(AI_LYRIC_TRANSCRIPTION)
+    list(APPEND BUNDLE_DIRS
+      "${CMAKE_CURRENT_BINARY_DIR}/_deps/whispercpp-build/src"
+      "${CMAKE_CURRENT_BINARY_DIR}/_deps/whispercpp-build/ggml/src"
+      "${CMAKE_CURRENT_BINARY_DIR}/_deps/whispercpp-build/ggml/src/ggml-blas"
+      "${CMAKE_CURRENT_BINARY_DIR}/_deps/whispercpp-build/ggml/src/ggml-metal"
+    )
+  endif()
+  if(AI_STEM_SEPARATION AND AI_STEM_SEPARATION_ONNXRUNTIME_ROOT)
+    list(APPEND BUNDLE_DIRS "${AI_STEM_SEPARATION_ONNXRUNTIME_ROOT}/lib")
+  endif()
   set(
     APPLE_CODESIGN_ENTITLEMENTS
     "${CMAKE_CURRENT_SOURCE_DIR}/packaging/macos/Mixxx.entitlements"
