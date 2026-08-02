@@ -1,6 +1,8 @@
 #include "controllers/bulk/bulkenumerator.h"
 
 #include <libusb.h>
+
+#include <utility>
 #include <qglobal.h>
 
 #ifdef __ANDROID__
@@ -55,6 +57,12 @@ static bool is_interesting(const uint16_t idVendor, const uint16_t idProduct) {
 
 QList<Controller*> BulkEnumerator::queryDevices() {
     qDebug() << "Scanning USB Bulk devices:";
+    // Same append-duplicates bug as HidEnumerator::queryDevices() -- see
+    // the comment there.
+    for (Controller* pDevice : std::as_const(m_devices)) {
+        retireDevice(pDevice);
+    }
+    m_devices.clear();
 #ifdef __ANDROID__
     QJniObject context = QNativeInterface::QAndroidApplication::context();
     QJniObject USB_SERVICE =

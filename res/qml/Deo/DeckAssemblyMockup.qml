@@ -8,12 +8,13 @@ import "../Theme"
 // representative ~1600x1100 window), so alignment/proportions between
 // sections can be checked visually in one place instead of piece by piece.
 //
-// CustomPadSection.qml and LoopSectionDesignMockup.qml show the real
-// component -- neither has a `required property string group`, so both
-// instantiate fine outside the live app. FXRack.qml, StemPads.qml,
-// TransportRow.qml, and JogWheel.qml all DO require a real `group` from
-// Mixxx.ControlProxy and can't run standalone, so those four slots are
-// plain labeled placeholder frames sized to match.
+// LoopSectionDesignMockup.qml shows the real component -- it has no
+// `required property string group`, so it instantiates fine outside the
+// live app. FXRack.qml, PadBankSection.qml (both decks' pad areas, since
+// the M4 pad-bank-switching rewrite), TransportRow.qml, and JogWheel.qml
+// all DO require a real `group` from Mixxx.ControlProxy and can't run
+// standalone, so those slots are plain labeled placeholder frames sized
+// to match.
 //
 // To swap a placeholder for the real thing: build a
 // "<Section>DesignMockup.qml" the same way LoopSectionDesignMockup.qml was
@@ -114,14 +115,22 @@ Item {
             x: daColumn.width + 8
             y: 0
 
-            CustomPadSection {
+            Rectangle {
                 id: dbUp
 
-                accentColor: "#3C7993"
+                border.color: Theme.deckLineColor
+                border.width: 1
+                color: "#222222"
                 height: 108
                 width: parent.width
                 x: 0
                 y: 0
+
+                Text {
+                    anchors.centerIn: parent
+                    color: Theme.deckTextSecondary
+                    text: "PadBankSection (placeholder)"
+                }
             }
             Rectangle {
                 color: Theme.deckLineColor

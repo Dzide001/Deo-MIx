@@ -23,6 +23,16 @@ class QmlLibraryTrackListColumn : public QObject {
     Q_PROPERTY(double autoHideWidth MEMBER m_autoHideWidth FINAL)
     Q_PROPERTY(QQmlComponent* delegate READ delegate WRITE setDelegate FINAL)
     Q_PROPERTY(Role role MEMBER m_role FINAL)
+    // M7/column-visibility: whether this column is currently hidden --
+    // TrackList.qml's updateColumnSize()/columnWidthProvider already read
+    // this (collapsing a hidden column to 0 width), but until now nothing
+    // ever set it, since this property didn't exist. A plain MEMBER
+    // property (no NOTIFY) is consistent with how preferredWidth is
+    // already mutated after construction by TrackList.qml's own
+    // column-resize handler -- callers that mutate `hidden` at runtime
+    // are expected to also call view.updateColumnSize()/forceLayout()
+    // themselves, same as that existing resize path already does.
+    Q_PROPERTY(bool hidden MEMBER m_hidden FINAL)
     QML_NAMED_ELEMENT(TrackListColumn)
   public:
     enum class SQLColumns {
@@ -34,6 +44,16 @@ class QmlLibraryTrackListColumn : public QObject {
         Key = ColumnCache::COLUMN_LIBRARYTABLE_KEY,
         FileType = ColumnCache::COLUMN_LIBRARYTABLE_FILETYPE,
         Bitrate = ColumnCache::COLUMN_LIBRARYTABLE_BITRATE,
+        // M7/column-visibility: 7 more real columns surfaced to QML for
+        // the first time -- all already exist in ColumnCache::Column and
+        // are shown by the legacy skin today, just never wired up here.
+        Genre = ColumnCache::COLUMN_LIBRARYTABLE_GENRE,
+        Comment = ColumnCache::COLUMN_LIBRARYTABLE_COMMENT,
+        Composer = ColumnCache::COLUMN_LIBRARYTABLE_COMPOSER,
+        Duration = ColumnCache::COLUMN_LIBRARYTABLE_DURATION,
+        DateAdded = ColumnCache::COLUMN_LIBRARYTABLE_DATETIMEADDED,
+        TimesPlayed = ColumnCache::COLUMN_LIBRARYTABLE_TIMESPLAYED,
+        Rating = ColumnCache::COLUMN_LIBRARYTABLE_RATING,
     };
     Q_ENUM(SQLColumns)
     enum class Role {
@@ -53,7 +73,8 @@ class QmlLibraryTrackListColumn : public QObject {
             double preferredWidth,
             double autoHideWidth,
             QQmlComponent* delegate,
-            Role role);
+            Role role,
+            bool hidden);
     const QString& label() const {
         return m_label;
     }
@@ -78,6 +99,9 @@ class QmlLibraryTrackListColumn : public QObject {
     void setDelegate(QQmlComponent* delegate) {
         m_pDelegate = qml_owned_ptr(delegate);
     }
+    bool hidden() const {
+        return m_hidden;
+    }
 
   private:
     QString m_label;
@@ -86,6 +110,7 @@ class QmlLibraryTrackListColumn : public QObject {
     int m_columnIdx{-1};
     double m_preferredWidth{-1};
     double m_autoHideWidth{-1};
+    bool m_hidden{false};
     qml_owned_ptr<QQmlComponent> m_pDelegate;
 };
 } // namespace qml

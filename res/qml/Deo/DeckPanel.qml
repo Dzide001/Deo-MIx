@@ -162,18 +162,16 @@ Item {
             height: 106
             clip: true
 
-            Deo.StemPads {
-                x: 0
-                y: 0
+            // M4/pad-bank-switching: binds directly to this wrapper's own
+            // real size instead of authoring a fixed 252x108 canvas and
+            // rescaling it via `transform: Scale` -- PadBankSection.qml
+            // reflows its own internal grid responsively, so it doesn't
+            // need a uniform-scale hack to fit whatever box it's given.
+            Deo.PadBankSection {
+                anchors.fill: parent
                 accentColor: root.accentColor
                 group: root.group
-
-                transform: Scale {
-                    origin.x: 0
-                    origin.y: 0
-                    xScale: stemPadsWrapper.width / 252
-                    yScale: stemPadsWrapper.height / 108
-                }
+                padCount: 8
             }
         }
 
@@ -190,18 +188,17 @@ Item {
             height: 108
             clip: true
 
-            Deo.CustomPadSection {
-                x: 0
-                y: 0
+            // M4/pad-bank-switching: same shared component as DA's
+            // stemPadsWrapper above -- each instance's `currentBank` is
+            // independent, so this deck can show a different bank than
+            // the other one. padCount: 4 keeps this narrow slot at its
+            // pre-unification scope (the old CustomPadSection.qml was
+            // always a 4-pad grid) regardless of which bank is selected.
+            Deo.PadBankSection {
+                anchors.fill: parent
                 accentColor: root.accentColor
                 group: root.group
-
-                transform: Scale {
-                    origin.x: 0
-                    origin.y: 0
-                    xScale: customPadWrapper.width / 139
-                    yScale: customPadWrapper.height / 108
-                }
+                padCount: 4
             }
         }
         Rectangle {
@@ -359,6 +356,31 @@ Item {
                         key: "slip_enabled"
                         text: "S"
                         toggleable: true
+                    }
+                }
+                // Get Lyrics, bottom-LEFT of the wheel (bottom-RIGHT
+                // mirrored) -- JogwheelDesignMockup.qml's bottom-left
+                // slot, annotated there as "Transcribe or get lyrics
+                // button". Same acquisition path as the karaoke window's
+                // own Get Lyrics button (KaraokeDisplayWindow.qml): free
+                // lrclib.net lookup first, local AI transcription only
+                // as fallback -- hence "lyrics", not "transcribe".
+                Skin.Button {
+                    anchors.bottom: parent.bottom
+                    anchors.left: root.mirrored ? undefined : parent.left
+                    anchors.right: root.mirrored ? parent.right : undefined
+                    anchors.margins: 10
+                    enabled: root.trackLoaded && !Mixxx.LyricTranscription.isRunning
+                    height: 20
+                    text: Mixxx.LyricTranscription.isRunning ? "…" : "♪"
+                    width: 20
+                    z: 2
+
+                    onClicked: {
+                        const player = Mixxx.PlayerManager.getPlayer(root.group);
+                        if (player && player.currentTrack) {
+                            Mixxx.LyricTranscription.transcribeLyrics(player.currentTrack, root.group);
+                        }
                     }
                 }
             }

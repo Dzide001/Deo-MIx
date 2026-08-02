@@ -35,6 +35,10 @@ class StemSeparationManager;
 #ifdef __VIDEO_ENGINE__
 class VideoEngineManager;
 #endif
+#ifdef __AI_LYRIC_TRANSCRIPTION__
+class WhisperTranscriptionManager;
+#endif
+class KaraokeManager;
 
 class CoreServices : public QObject {
     Q_OBJECT
@@ -104,6 +108,14 @@ class CoreServices : public QObject {
         return m_pVideoEngineManager;
     }
 #endif
+    std::shared_ptr<KaraokeManager> getKaraokeManager() const {
+        return m_pKaraokeManager;
+    }
+#ifdef __AI_LYRIC_TRANSCRIPTION__
+    std::shared_ptr<WhisperTranscriptionManager> getWhisperTranscriptionManager() const {
+        return m_pWhisperTranscriptionManager;
+    }
+#endif
 
     std::shared_ptr<SettingsManager> getSettingsManager() const {
         return m_pSettingsManager;
@@ -158,6 +170,10 @@ class CoreServices : public QObject {
 #endif
 #ifdef __VIDEO_ENGINE__
     std::shared_ptr<VideoEngineManager> m_pVideoEngineManager;
+#endif
+    std::shared_ptr<KaraokeManager> m_pKaraokeManager;
+#ifdef __AI_LYRIC_TRANSCRIPTION__
+    std::shared_ptr<WhisperTranscriptionManager> m_pWhisperTranscriptionManager;
 #endif
 
     std::shared_ptr<KeyboardEventFilter> m_pKeyboardEventFilter;

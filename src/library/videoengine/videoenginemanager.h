@@ -1,5 +1,6 @@
 #pragma once
 
+#include <QElapsedTimer>
 #include <QImage>
 #include <QObject>
 #include <QString>
@@ -17,8 +18,17 @@ class QTimer;
 // pattern already used by QmlVideoPreviewItem.
 typedef struct _GstElement GstElement;
 typedef struct _GstPad GstPad;
+// Stage 7: same opaque-pointer treatment for the GL-interop types and
+// GstSample -- see the class doc comment's Stage 7 entry.
+typedef struct _GstGLDisplay GstGLDisplay;
+typedef struct _GstGLContext GstGLContext;
+typedef struct _GstSample GstSample;
 
 namespace mixxx {
+
+#ifdef __VIDEO_ENGINE_NDI_OUTPUT__
+class NdiOutputSender;
+#endif
 
 /// M12 Stage 3b/3c/3d: the real mixxx-lib integration of the video engine
 /// researched/validated in milestone_12_video_spec_addendum.md.
@@ -448,16 +458,136 @@ namespace mixxx {
 /// duration mismatch can only ever contaminate one recent window, never
 /// accumulate. See `maybeCorrectContinuousDrift()`'s own comment.
 ///
-/// Known limitation, deliberately not addressed here: this still assumes
-/// the video plays at its own natural 1x rate. If a deck's audio plays at
-/// a non-1x rate (tempo/pitch/vinyl adjustment), continuous drift
-/// correction will keep finding real, growing drift and correcting
-/// roughly every throttle window indefinitely, for as long as the rate
-/// mismatch persists -- expected given this architecture, not a bug.
-/// True rate-matching (slaving the video's own playback rate to the
-/// audio's tempo via a segment seek's rate parameter, so no periodic
-/// re-seeking is needed at all) is a natural follow-up, out of scope
-/// here.
+/// Stage 4's known limitation as originally written here -- continuous
+/// drift correction alone assumed 1x video playback, so a deck played at a
+/// different tempo would drift and get repeatedly re-corrected rather than
+/// genuinely locking -- is addressed by Stage 5 below.
+///
+/// Stage 5: rate-matching. `handleRateChanged()` subscribes each deck to
+/// `"[ChannelN]/rate_ratio"` (a normalized speed multiplier already written
+/// by the pitch/tempo slider, sync-lock, and vinyl control -- NOT
+/// `"[ChannelN]/rate"`, the raw untransformed slider position) and slaves
+/// that deck's video playback rate to match, so a deck played faster or
+/// slower than 1x now genuinely plays its video at the matching speed
+/// instead of relying purely on `maybeCorrectContinuousDrift()` to
+/// repeatedly re-seek a video that's structurally always trying to play at
+/// 1x. A standalone spike (`videoengine_rateseek_cli.cpp`, since removed --
+/// see `src/videoengine/CMakeLists.txt`'s history comment) confirmed
+/// `GST_SEEK_FLAG_INSTANT_RATE_CHANGE` -- the mechanism that would let this
+/// happen with zero flushing/glitch cost at all -- is outright rejected by
+/// this pipeline's `decodebin` chain (`gst_element_seek()` returned FALSE
+/// every time, not merely "accepted but ignored"), confirming GStreamer's
+/// own documented "can't work in all cases" caveat for that flag applies
+/// here. `handleRateChanged()` therefore uses an ordinary flushing
+/// `gst_element_seek()` per rate change instead, throttled/deduped
+/// (skipped unless the new rate differs from the last-applied one past a
+/// small epsilon) so it doesn't reseek on every tiny CO tick -- the same
+/// cost/tradeoff as this class's other flushing seeks. Deliberately does
+/// NOT attempt to track a sign change (a direction change, e.g. through a
+/// backspin/reverse excursion): GStreamer's rate-seek mechanisms are
+/// unreliable across a direction change regardless of flag, and reverse
+/// decode support is inconsistent per-codec; a direction change instead
+/// falls back to the existing position-based correction paths.
+/// `maybeCorrectContinuousDrift()`'s role shrank accordingly, from "the
+/// only mechanism ever catching non-1x drift" to a coarse safety net for
+/// what rate-tracking can't see (vinyl's throttled/direction-stripped
+/// `rate_ratio` echo, the async gap between a rate change and its queued
+/// rate-seek landing, transient scratch/backspin) -- its tolerance/throttle
+/// were widened to match.
+///
+/// Stage 6: NDI output (`#ifdef __VIDEO_ENGINE_NDI_OUTPUT__`, a separate
+/// build-time option gated on a separately-downloaded, free-but-proprietary
+/// SDK -- see the root `CMakeLists.txt`'s `VIDEO_ENGINE_NDI_OUTPUT` block).
+/// `NdiOutputSender` (`src/library/videoengine/ndioutputsender.{h,cpp}`) is
+/// fed the exact same composited `QImage` `grabPreviewFrame()` already
+/// produces for the in-app preview window -- no GStreamer pipeline changes,
+/// no duplicate blending work. Since Stage 4 moved compositing entirely out
+/// of GStreamer into C++, there was never a GStreamer pipeline segment to
+/// tee an NDI sink off of in the first place, so this calls the NDI SDK's
+/// own raw C send API directly from this class rather than integrating a
+/// GStreamer NDI plugin (which would additionally have meant a Rust/Cargo
+/// build dependency with documented arm64-macOS build-maturity risk, a
+/// mismatch with this project's plain-C/C++ static-plugin convention).
+///
+/// Stage 7: GPU-upload preview path. `grabPreviewFrame()`'s CPU path
+/// (GStreamer appsink -> `QImage` copy -> `blendFrames()` -> `QPainter`
+/// blit) stays exactly as-is and remains the default/fallback -- this adds
+/// a second, opt-in path alongside it rather than replacing it, since
+/// there's no safe *partial* version of "avoid the CPU copy": routing
+/// through GStreamer's GL elements but still ending at a CPU-mapped frame
+/// would pay for a GPU upload AND a GPU download for zero benefit, worse
+/// than the existing CPU path, not a smaller version of the real feature.
+/// `setSharedGlContext()` is called once, by a new companion QML item
+/// (`Mixxx.VideoPreviewGl`, `src/qml/qmlvideopreviewglitem.{h,cpp}`) as
+/// soon as its own `QQuickWindow`'s scene graph/RHI OpenGL context is
+/// ready -- VideoEngineManager can't do this eagerly at construction time
+/// (Stage 3g's reasoning for building pipelines in the constructor) because
+/// no QML window/GL context exists yet that early. On success, both decks'
+/// pipelines are rebuilt to route through `glupload`/`glcolorconvert`
+/// instead of plain `videoconvert`, ending in GL-memory
+/// (`memory:GLMemory`) caps instead of system-memory RGB -- the decoded
+/// frame lands directly in a GPU texture, no CPU copy. `isGlPreviewAvailable()`
+/// reports whether that succeeded, mainly for logging/diagnostics -- QML
+/// itself doesn't need to reactively branch on it at all:
+/// `VideoPreviewPanel.qml` stacks `Mixxx.VideoPreviewGl` directly on top of
+/// the original, always-live `Mixxx.VideoPreview` (`QmlVideoPreviewItem`,
+/// completely untouched) at the same geometry. Before GL sharing succeeds
+/// (or if it never does -- wrong platform, a Qt RHI API returning null,
+/// etc.) the GL item's `updatePaintNode()` simply returns a null node, so
+/// the CPU item underneath shows through with no broken intermediate
+/// state; once GL frames start arriving, the GL item's own opaque
+/// composite covers the CPU one every tick, with no visible seam since
+/// both draw the exact same crossfader-driven blend. This sidesteps
+/// needing any cross-thread "which path is ready" signal between C++ and
+/// QML, which would otherwise be its own small source of races given
+/// `setSharedGlContext()` runs on the render thread.
+///
+/// The actual GL-context-sharing mechanism follows GStreamer's own
+/// documented app-integration pattern: each deck's pipeline bus gets a
+/// synchronous handler (`gst_bus_set_sync_handler()`, not the normal async
+/// bus-watch dispatch -- the `GST_MESSAGE_NEED_CONTEXT` query this responds
+/// to must be answered before the requesting element proceeds past its own
+/// state change) that answers `GST_GL_DISPLAY_CONTEXT_TYPE`/
+/// `"gst.gl.app_context"` context requests with `m_pGlDisplay`/
+/// `m_pGlContext`, letting `glupload` create its own internal GStreamer GL
+/// context *shared* with the app-provided one (`gst_gl_context_new_wrapped()`,
+/// wrapping the native `CGLContextObj` Qt Quick's own OpenGL RHI backend is
+/// using -- extracted via `QNativeInterface::QCocoaGLContext`, verified
+/// against the actually-installed Qt 6.8.3 headers before writing this, in
+/// a small Objective-C++ helper file since that extraction needs ObjC,
+/// `src/qml/qmlvideopreviewglitem_mac.mm`). A texture created by either
+/// side is then valid on the other, with no copy.
+///
+/// `Mixxx.VideoPreviewGl` renders the two decks as two `QSGSimpleTextureNode`
+/// children (deck A opaque, deck B drawn on top with its opacity set to
+/// the same crossfader-derived alpha `blendFrames()` already uses) rather
+/// than a custom shader/material -- since both sources are always fully
+/// opaque RGB with no alpha of their own, and the two alpha weights always
+/// sum to 1.0, "draw A, then draw B at opacity alphaB" is mathematically
+/// identical to `blendFrames()`'s `A*alphaA + B*alphaB` mix, achieved with
+/// a plain, already-public Qt Quick API instead of hand-written GLSL --
+/// deliberately the simpler, lower-risk choice given this whole stage's
+/// real risk is the GL-context-sharing plumbing, not the blend math.
+///
+/// Each deck's `GstSample` (which owns the actual GL texture's memory) is
+/// kept alive for two frames past the one it was pulled for (a small
+/// ring, not released the instant `updatePaintNode()` returns) since Qt
+/// Quick's actual GPU read of a texture happens asynchronously, on its own
+/// render schedule, not synchronously within that call.
+///
+/// **Genuinely novel territory for this codebase, not fully verified**:
+/// this is the one piece of the whole video engine that can't be checked
+/// by reading logs or querying element state -- only by looking at the
+/// screen. Every API used here (`QRhiTexture::createFrom()`,
+/// `QQuickWindow::createTextureFromRhiTexture()`, `QNativeInterface::
+/// QCocoaGLContext`, GStreamer's GL context-sharing calls) was verified to
+/// exist with the expected signature against the actual installed Qt
+/// 6.8.3 and GStreamer headers before being used, which rules out "wrong
+/// API name" as a failure mode -- it does NOT rule out a genuine logic or
+/// synchronization bug in code this complex that's never been exercised
+/// for real. Real-world verification (does the video actually render, any
+/// corruption/tearing, does it stay stable under extended real use) needs
+/// the user's own hands-on test.
 class VideoEngineManager : public QObject {
     Q_OBJECT
   public:
@@ -496,6 +626,18 @@ class VideoEngineManager : public QObject {
     /// Returns false if unavailable or the deck group isn't recognized.
     bool setCameraSource(const QString& deckGroup, bool enabled);
 
+#ifdef __VIDEO_ENGINE_NDI_OUTPUT__
+    /// Stage 6: starts or stops advertising the composited preview as an
+    /// NDI source named `sourceName` (see the class doc comment's Stage 6
+    /// entry and `NdiOutputSender`). Only declared/compiled when built
+    /// with `-DVIDEO_ENGINE_NDI_OUTPUT=ON` (and a valid `-DNDI_ROOT=<path>`
+    /// pointing at the NDI SDK) -- callers (QmlVideoEngineProxy) must
+    /// `#ifdef` around any use of this method the same way. Returns false
+    /// if unavailable or if the NDI SDK's own send-instance creation fails
+    /// (e.g. the NDI runtime isn't actually installed on this machine).
+    bool enableNdiOutput(bool enabled, const QString& sourceName);
+#endif
+
     /// Pulls the latest available frame from each deck's own appsink and
     /// blends them in C++ using the current crossfader value, returning
     /// one composited QImage. Returns a null QImage if neither deck has
@@ -504,6 +646,62 @@ class VideoEngineManager : public QObject {
     /// QML preview widget in the loop; a future thumbnail/snapshot feature
     /// could reuse it too.
     QImage grabPreviewFrame(int timeoutMs = 2000);
+
+    /// Stage 7: one deck's currently-available GL texture, ready for direct
+    /// use by Qt Quick's scene graph -- no CPU copy. `textureId == 0` means
+    /// no frame is available (deck not loaded/rebuilding). `pOwningSample`
+    /// is the GstSample that owns the texture's actual GPU memory; the
+    /// caller MUST eventually pass it to releaseGlFrameSample() (not
+    /// immediately -- see the class doc comment's Stage 7 entry on why a
+    /// short-lived ring, not instant release, is needed) or the
+    /// underlying GStreamer buffer pool can't reclaim it.
+    struct GlFrame {
+        unsigned int textureId = 0;
+        int width = 0;
+        int height = 0;
+        GstSample* pOwningSample = nullptr;
+    };
+    /// Both decks' current GL frames plus the crossfader value needed to
+    /// blend them, in one call (avoids two separate calls racing against a
+    /// crossfader value that could change in between). Returns default-
+    /// constructed (textureId == 0 for both) if !isGlPreviewAvailable().
+    struct GlPreviewFrames {
+        GlFrame deckA;
+        GlFrame deckB;
+        double crossfaderValue = 0.0;
+    };
+    GlPreviewFrames grabPreviewGlFrames();
+    /// Releases a GstSample previously handed out via grabPreviewGlFrames()
+    /// -- a thin wrapper so callers (QmlVideoPreviewGlItem) never need to
+    /// include a GStreamer header themselves just to call gst_sample_unref().
+    void releaseGlFrameSample(GstSample* pSample);
+
+    /// Stage 7: called once by QmlVideoPreviewGlItem as soon as its own
+    /// QQuickWindow's OpenGL RHI context exists, handing over the native
+    /// CGLContextObj (as a raw quintptr -- see
+    /// qmlvideopreviewglitem_mac.mm) so GStreamer's GL elements can create
+    /// their own context genuinely shared with Qt Quick's. Rebuilds both
+    /// decks' pipelines to route through GL on success. Returns false (and
+    /// leaves both decks on the existing, proven CPU pipeline untouched)
+    /// if `nativeCglContextHandle` is 0 or GL context creation otherwise
+    /// fails -- safe to call defensively; failure here is not fatal to the
+    /// rest of the video engine.
+    /// Which GL flavour `nativeCglContextHandle` actually is. Must be
+    /// reported by the caller (which can see Qt's QSurfaceFormat) rather
+    /// than assumed here: declaring a legacy 2.1 context as OpenGL3 makes
+    /// gst_gl_context_fill_info() fail and silently disables this whole
+    /// path, which is exactly what happened on the first re-enable
+    /// attempt. Mixxx sets no version/profile, so macOS gives Qt a legacy
+    /// compatibility context -- OpenGlLegacy is the real-world case here.
+    enum class GlApi {
+        OpenGlLegacy,
+        OpenGl3,
+        Gles2,
+    };
+    bool setSharedGlContext(quintptr nativeCglContextHandle, GlApi api);
+    bool isGlPreviewAvailable() const {
+        return m_pGlContext != nullptr;
+    }
 
   private slots:
     void slotEnabledChanged(double value);
@@ -544,6 +742,18 @@ class VideoEngineManager : public QObject {
         QObject* pSeekWorkerContext = nullptr;
         std::unique_ptr<ControlProxy> pPlayControl;
         std::unique_ptr<ControlProxy> pPositionControl;
+        // Stage 5: "[ChannelN]/rate_ratio" -- a normalized playback-speed
+        // multiplier (1.0 = normal speed), already written by the pitch/
+        // tempo slider, sync-lock, and (throttled, direction-stripped)
+        // vinyl control. Deliberately not "[ChannelN]/rate", which is the
+        // raw, untransformed slider position and means nothing on its own.
+        std::unique_ptr<ControlProxy> pRateControl;
+        // The last rate this deck's video was actually re-seeked to match
+        // -- lets handleRateChanged() dedupe/throttle (skip reseeking on
+        // every tiny CO tick) and detect a sign change (direction change,
+        // e.g. through a backspin), which rate-tracking deliberately
+        // doesn't attempt to follow.
+        double lastAppliedRate = 1.0;
         QString videoPath;
         // Stage 3y: when true, this deck's pipeline uses a live
         // avfvideosrc camera feed instead of videoPath -- the loaded clip
@@ -575,6 +785,17 @@ class VideoEngineManager : public QObject {
         // stable instead of flickering toward "100% other deck" on every
         // poll tick that doesn't get a fresh sample from this deck.
         QImage lastFrame;
+        // Stage 4 (continuous drift correction): the video position and
+        // audio position at the last known-good sync point -- reset every
+        // time ANY re-sync happens (play-start re-anchor, a big-jump or
+        // beatloop correction, initial clip load, or a continuous
+        // correction itself). maybeCorrectContinuousDrift() only ever
+        // compares how far each side has moved *since this anchor*, never
+        // an absolute `audioPosition * videoDuration` recomputation -- see
+        // that method's comment for why (Stage 3o's failure mode).
+        qint64 anchorVideoPositionNs = 0;
+        double anchorAudioPosition = 0.0;
+        QElapsedTimer driftCheckThrottle;
     };
 
     void initDeckControls(DeckVideoContext& deck, const QString& channelGroup);
@@ -649,6 +870,41 @@ class VideoEngineManager : public QObject {
             bool stepFrameAfter = true,
             std::function<void()> onLanded = nullptr);
     void handlePositionChanged(DeckVideoContext& deck, double newPosition);
+    // Stage 5: slaves this deck's video playback rate to the audio's own
+    // tempo/pitch rate ("[ChannelN]/rate_ratio"), so a deck played faster
+    // or slower than 1x genuinely plays its video at the matching speed
+    // instead of relying on maybeCorrectContinuousDrift() to repeatedly
+    // re-seek a video that's structurally always trying to play at 1x. A
+    // standalone spike (see src/videoengine/CMakeLists.txt's Stage 5
+    // history comment) confirmed GST_SEEK_FLAG_INSTANT_RATE_CHANGE -- the
+    // mechanism that would let this happen with no flushing/glitch at all
+    // -- is outright rejected by this pipeline's decodebin chain, so this
+    // uses an ordinary flushing gst_element_seek() per rate change instead,
+    // same cost tradeoff as this class's other flushing seeks, made
+    // acceptable by throttling/deduping (skip re-seeking on every tiny CO
+    // tick, only act on a change past a small epsilon). Deliberately does
+    // NOT attempt to track a sign change (direction change, e.g. through a
+    // backspin/reverse excursion) -- GStreamer's rate-seek mechanisms are
+    // unreliable across a direction change regardless of flag, and reverse
+    // decode support is inconsistent per-codec; a direction change falls
+    // back to the existing position-based correction paths instead.
+    void handleRateChanged(DeckVideoContext& deck, double newRate);
+    // Stage 4: continuous, small-drift correction for ordinary playback --
+    // handlePositionChanged()'s big-jump/backward-jump branches only ever
+    // caught large, discrete position changes; between those events, a
+    // deck's video free-ran on GStreamer's own wall-clock with nothing
+    // correcting it. Anchor-and-delta design (see the DeckVideoContext
+    // member comment): deliberately does NOT recompute an absolute
+    // expected position from `audioPosition * videoDuration` on every
+    // check -- that was Stage 3o's actual bug (a persistent per-file
+    // audio/video duration mismatch became a permanent, non-decaying
+    // offset that fired a disruptive re-seek roughly once a second,
+    // forever, even during perfectly healthy playback). Comparing only
+    // the delta since the last known-good anchor means a structural
+    // duration mismatch can only ever contaminate one recent, bounded
+    // window, never accumulate -- the anchor resets every time this (or
+    // any other) correction lands.
+    void maybeCorrectContinuousDrift(DeckVideoContext& deck);
     void commitScrubSeek(DeckVideoContext& deck);
     // Stage 4: takes the pipeline explicitly (rather than reading a class
     // member) now that each deck has its own -- the caller is responsible
@@ -670,6 +926,35 @@ class VideoEngineManager : public QObject {
 
     DeckVideoContext m_deckA;
     DeckVideoContext m_deckB;
+
+    // Stage 7: null until setSharedGlContext() succeeds -- both null is the
+    // permanent, safe default (GL preview simply unavailable, CPU path
+    // used) if it's never called or fails. One shared pair for the whole
+    // app, not per-deck, matching Qt Quick's own single top-level shared
+    // GL context per process.
+    GstGLDisplay* m_pGlDisplay = nullptr;
+    /// GStreamer's OWN GL context, created sharing with (never equal to)
+    /// the wrapped Qt one below. This is what the pipelines get.
+    GstGLContext* m_pGlContext = nullptr;
+    /// A non-owning GStreamer wrapper around Qt Quick's render-thread CGL
+    /// context, used ONLY as the share-group source when creating
+    /// m_pGlContext. It must never be handed to a pipeline: doing so
+    /// makes GStreamer's streaming thread activate Qt's own context while
+    /// Qt's render thread is also using it, and a CGL context is not safe
+    /// to have current on two threads at once -- that was the cause of
+    /// the GPU-level fault (a hard crash producing no macOS crash report,
+    /// since it's not a Mach exception) seen when this path was first
+    /// attempted.
+    GstGLContext* m_pGlWrappedQtContext = nullptr;
+
+#ifdef __VIDEO_ENGINE_NDI_OUTPUT__
+    // Stage 6. Owned as a unique_ptr (rather than a plain value member) so
+    // this header only needs a forward declaration, not NdiOutputSender's
+    // own header, keeping the same "don't pull dependency headers into
+    // videoenginemanager.h" discipline this file already follows for
+    // GStreamer.
+    std::unique_ptr<NdiOutputSender> m_pNdiSender;
+#endif
 };
 
 } // namespace mixxx

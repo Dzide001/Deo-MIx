@@ -90,6 +90,13 @@ class VideoEngineManagerTest : public MixxxTest {
         m_pDeckBPlayCO = std::make_unique<ControlObject>(ConfigKey("[Channel2]", "play"));
         m_pDeckAPositionCO = std::make_unique<ControlObject>(ConfigKey("[Channel1]", "playposition"));
         m_pDeckBPositionCO = std::make_unique<ControlObject>(ConfigKey("[Channel2]", "playposition"));
+        // Stage 5: VideoEngineManager now also subscribes to each deck's
+        // "rate_ratio" CO -- default value 1.0 (normal speed), matching
+        // RateControl's own real default (ratecontrol.cpp).
+        m_pDeckARateCO = std::make_unique<ControlObject>(
+                ConfigKey("[Channel1]", "rate_ratio"), true, false, false, 1.0);
+        m_pDeckBRateCO = std::make_unique<ControlObject>(
+                ConfigKey("[Channel2]", "rate_ratio"), true, false, false, 1.0);
         m_pManager = std::make_unique<mixxx::VideoEngineManager>(nullptr);
     }
 
@@ -100,6 +107,8 @@ class VideoEngineManagerTest : public MixxxTest {
         m_pDeckBPlayCO.reset();
         m_pDeckAPositionCO.reset();
         m_pDeckBPositionCO.reset();
+        m_pDeckARateCO.reset();
+        m_pDeckBRateCO.reset();
         MixxxTest::TearDown();
     }
 
@@ -108,6 +117,8 @@ class VideoEngineManagerTest : public MixxxTest {
     std::unique_ptr<ControlObject> m_pDeckBPlayCO;
     std::unique_ptr<ControlObject> m_pDeckAPositionCO;
     std::unique_ptr<ControlObject> m_pDeckBPositionCO;
+    std::unique_ptr<ControlObject> m_pDeckARateCO;
+    std::unique_ptr<ControlObject> m_pDeckBRateCO;
     std::unique_ptr<mixxx::VideoEngineManager> m_pManager;
 };
 
@@ -227,4 +238,48 @@ TEST_F(VideoEngineManagerTest, DeckPauseIsIndependentOfOtherDeck) {
     ASSERT_FALSE(deckAFrame2.isNull());
     EXPECT_NE(deckAFrame1, deckAFrame2)
             << "deck A is playing -- its frames should keep advancing";
+}
+
+TEST_F(VideoEngineManagerTest, RateChangeDoesNotBreakPlayback) {
+    if (!m_pManager->isAvailable()) {
+        GTEST_SKIP() << "VideoEngineManager reports GStreamer unavailable";
+    }
+    ASSERT_TRUE(QFileInfo::exists(deckAAnimatedFixturePath()));
+
+    // Stage 5: this is a plumbing/regression test, not a precision check --
+    // asserting the video's *exact* playback rate actually matches
+    // "[Channel1]/rate_ratio" would need ground-truth frame numbering baked
+    // into the fixture (the animated testsrc pattern used here is
+    // continuous/cyclic, not numbered) or white-box access to the private
+    // per-deck GstElement this test fixture deliberately doesn't have (see
+    // DeckPauseIsIndependentOfOtherDeck's own comment on the same
+    // constraint). What this test DOES verify: changing rate_ratio on a
+    // playing deck with a real clip loaded doesn't crash, doesn't freeze
+    // playback, and doesn't break the still-independent crossfade/pause
+    // behavior proven above -- i.e. handleRateChanged()'s new code path
+    // (the CO subscription, the queued rate-seek) is safe to exercise.
+    // Real-world verification of the actual rate-matching behavior needs
+    // the user's own hands-on test (load a clip, adjust the pitch/tempo
+    // fader, watch the video).
+    m_pDeckAPlayCO->set(1.0);
+    QCoreApplication::processEvents();
+    ASSERT_TRUE(m_pManager->loadVideo(QStringLiteral("[Channel1]"), deckAAnimatedFixturePath()));
+
+    QImage firstFrame = grabFirstNonNullFrame(m_pManager.get());
+    ASSERT_FALSE(firstFrame.isNull()) << "deck A should have delivered a first real frame";
+
+    // A deliberately large change (not a subtle pitch nudge) so this test
+    // isn't sensitive to handleRateChanged()'s own epsilon/dedupe
+    // threshold.
+    m_pDeckARateCO->set(1.5);
+    pumpEventsFor(300); // let the queued rate-seek actually process
+
+    QImage frameAfterRateChange1 = m_pManager->grabPreviewFrame();
+    ASSERT_FALSE(frameAfterRateChange1.isNull())
+            << "playback should still be producing frames after a rate change";
+    pumpEventsFor(200);
+    QImage frameAfterRateChange2 = m_pManager->grabPreviewFrame();
+    ASSERT_FALSE(frameAfterRateChange2.isNull());
+    EXPECT_NE(frameAfterRateChange1, frameAfterRateChange2)
+            << "deck A should still be visibly playing (not frozen) after a rate change";
 }

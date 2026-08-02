@@ -12,7 +12,8 @@ QmlLibraryTrackListColumn::QmlLibraryTrackListColumn(QObject* parent,
         double preferredWidth,
         double autoHideWidth,
         QQmlComponent* pDelegate,
-        Role role)
+        Role role,
+        bool hidden)
         : QObject(parent),
           m_label(label),
           m_role(role),
@@ -20,6 +21,7 @@ QmlLibraryTrackListColumn::QmlLibraryTrackListColumn(QObject* parent,
           m_columnIdx(columnIdx),
           m_preferredWidth(preferredWidth),
           m_autoHideWidth(autoHideWidth),
+          m_hidden(hidden),
           m_pDelegate(pDelegate) {
 }
 

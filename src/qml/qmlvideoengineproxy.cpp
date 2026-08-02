@@ -48,5 +48,18 @@ bool QmlVideoEngineProxy::setCameraSource(const QString& deckGroup, bool enabled
     return s_pVideoEngineManager->setCameraSource(deckGroup, enabled);
 }
 
+bool QmlVideoEngineProxy::enableNdiOutput(bool enabled, const QString& sourceName) {
+#ifdef __VIDEO_ENGINE_NDI_OUTPUT__
+    if (!s_pVideoEngineManager) {
+        return false;
+    }
+    return s_pVideoEngineManager->enableNdiOutput(enabled, sourceName);
+#else
+    Q_UNUSED(enabled);
+    Q_UNUSED(sourceName);
+    return false;
+#endif
+}
+
 } // namespace qml
 } // namespace mixxx

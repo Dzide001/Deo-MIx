@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>DlgPrefAiLyricTranscriptionDlg</class>
+ <widget class="QWidget" name="DlgPrefAiLyricTranscriptionDlg">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>485</width>
+    <height>200</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>AI Lyric Transcription Preferences</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <widget class="QGroupBox" name="groupBoxModel">
+     <property name="title">
+      <string>Whisper GGML Model</string>
+     </property>
+     <layout class="QVBoxLayout" name="verticalLayoutModel">
+      <item>
+       <widget class="QLabel" name="labelModelDescription">
+        <property name="text">
+         <string>AI lyric transcription requires a whisper.cpp model in GGML format (e.g. ggml-base.en.bin). This is an experimental, opt-in feature -- select the model file you have obtained separately.</string>
+        </property>
+        <property name="wordWrap">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <layout class="QHBoxLayout" name="horizontalLayoutModelPath">
+        <item>
+         <widget class="QLineEdit" name="LineEditModelPath">
+          <property name="placeholderText">
+           <string>/path/to/ggml-base.en.bin</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="PushButtonBrowseModel">
+          <property name="text">
+           <string>Browse...</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <widget class="QLabel" name="LabelModelStatus">
+        <property name="text">
+         <string>Not set</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <spacer name="verticalSpacer">
+     <property name="orientation">
+      <enum>Qt::Vertical</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>20</width>
+       <height>40</height>
+      </size>
+     </property>
+    </spacer>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

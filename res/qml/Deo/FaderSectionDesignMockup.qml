@@ -8,7 +8,7 @@ Item {
     Rectangle {
         id: rectangle7
         x: 4
-        y: 192
+        y: 165
         width: 17
         height: 15
         color: "#0f2e3f"
@@ -18,7 +18,7 @@ Item {
     Rectangle {
         id: rectangle8
         x: 24
-        y: 192
+        y: 165
         width: 17
         height: 15
         color: "#0f2e3f"
@@ -32,7 +32,7 @@ Item {
         x: 4
         y: 6
         width: 37
-        height: 180
+        height: 153
         color: "#0f2e3f"
     }
     Rectangle {
@@ -59,14 +59,14 @@ Item {
         x: 21
         y: 49
         width: 3
-        height: 127
+        height: 104
         color: "#081f2b"
     }
 
     Rectangle {
         id: rectangle12
         x: 14
-        y: 159
+        y: 138
         width: 17
         height: 10
         color: "#354d5b"

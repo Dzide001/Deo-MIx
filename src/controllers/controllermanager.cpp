@@ -4,6 +4,7 @@
 #include <QThread>
 
 #include "controllers/controller.h"
+#include "controllers/controllerhotplugmonitor.h"
 #include "controllers/controllerlearningeventfilter.h"
 #include "controllers/controllermappinginfoenumerator.h"
 #include "controllers/defs_controllers.h"
@@ -187,11 +188,18 @@ void ControllerManager::slotInitialize() {
         m_enumerators.push_back(std::make_unique<HidEnumerator>());
 #endif
     } // Mutex locker released here
+
     emit initialized();
 }
 
 void ControllerManager::slotShutdown() {
     DEBUG_ASSERT_THIS_QOBJECT_THREAD_AFFINITY();
+    // Stop first so no devicesMayHaveChanged() signal (and therefore no
+    // queued slotRescanDevices() call) can arrive once enumerator teardown
+    // below begins.
+    if (m_pHotplugMonitor) {
+        m_pHotplugMonitor->stop();
+    }
     stopPolling();
 
     // Clear m_enumerators before deleting the enumerators to prevent other code
@@ -350,6 +358,38 @@ void ControllerManager::slotSetUpDevices() {
     }
 
     pollIfAnyControllersOpen();
+
+    // Automatic OS-level hotplug detection (macOS only, no-op elsewhere).
+    // Connected to slotSetUpDevices() itself (this function) rather than
+    // plain slotRescanDevices(): every rescan replaces ALL Controller
+    // instances with fresh, CLOSED ones (each enumerator's queryDevices()
+    // retires its old objects), so a bare rescan would silently
+    // disconnect any running controller mapping. Re-running the full
+    // setup sequence re-opens every config-enabled controller with its
+    // configured mapping afterwards -- which is also exactly the desired
+    // hotplug UX: plugging in an enabled controller brings it up ready
+    // to use, no Preferences visit needed. Re-entry is safe: the
+    // m_pHotplugMonitor guard below keeps a second monitor from being
+    // constructed.
+    //
+    // Started here (end of the startup device-open sequence above), NOT
+    // in slotInitialize(): IOHIDManager fires its device-matching
+    // callback once immediately for every already-connected device as
+    // soon as it's registered, which -- if registered any earlier --
+    // could trigger an automatic rescan (rebuilding
+    // m_controllers/Controller* instances) while the for-loop above is
+    // still mid-iteration opening controllers from an OLDER Controller*
+    // snapshot, racing and potentially dereferencing an instance that
+    // rescan just tore down. A real crash exactly matching this race was
+    // hit and root-caused during manual testing.
+    if (!m_pHotplugMonitor) {
+        m_pHotplugMonitor = std::make_unique<ControllerHotplugMonitor>();
+        connect(m_pHotplugMonitor.get(),
+                &ControllerHotplugMonitor::devicesMayHaveChanged,
+                this,
+                &ControllerManager::slotSetUpDevices);
+        m_pHotplugMonitor->start();
+    }
 }
 
 void ControllerManager::pollIfAnyControllersOpen() {

@@ -51,6 +51,10 @@ QString StemSeparationManager::resolveModelPath() const {
     return m_pConfig->getValueString(ConfigKey(AI_STEM_SEPARATION_PREF_KEY, "ModelPath"));
 }
 
+void StemSeparationManager::setModelPath(const QString& path) {
+    m_pConfig->setValue(ConfigKey(AI_STEM_SEPARATION_PREF_KEY, "ModelPath"), path);
+}
+
 QString StemSeparationManager::resolveOutputPath(const TrackPointer& pSourceTrack) const {
     const QString stemsDir = m_pConfig->getSettingsPath() + "/stems";
     QDir().mkpath(stemsDir);

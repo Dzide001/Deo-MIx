@@ -112,6 +112,21 @@ if(APPLE)
   )
 endif()
 
+# Stage 5 investigated GST_SEEK_FLAG_INSTANT_RATE_CHANGE (the documented
+# mechanism for changing a running element's playback rate without a
+# flushing seek) as the way to slave a deck's video to the audio's tempo/
+# pitch rate continuously and glitch-free. A standalone repro
+# (videoengine_rateseek_cli.cpp, same throwaway-spike role as
+# videoengine_lockedstate_cli.cpp below) proved gst_element_seek() with this
+# flag is outright REJECTED (returns FALSE) against this pipeline's
+# decodebin chain -- not merely ignored, genuinely unsupported here, exactly
+# the "can't work in all cases" caveat GStreamer's own docs give for this
+# flag. VideoEngineManager's real rate-matching therefore uses a throttled,
+# ordinary flushing gst_element_seek() per rate change instead (same
+# accept-the-cost-since-it's-infrequent reasoning as every other flushing
+# seek already in this class) -- the repro CLI was removed once this
+# one-time question was answered, same precedent as below.
+
 # Stage 3i investigated gst_element_set_locked_state as a way to pause one
 # branch of the shared crossfade pipeline independently -- confirmed PAUSE
 # works reliably, but RESUME does not (every element reports a clean

@@ -209,6 +209,9 @@ class Controller : public QObject {
     friend class ControllerJSProxy;
     // accesses lots of our stuff, but in the same thread
     friend class ControllerManager;
+    // owns Controller lifecycles; needs close() when retiring a device
+    // dropped by re-enumeration (see ControllerEnumerator::retireDevice)
+    friend class ControllerEnumerator;
     // For testing
     friend class MappingTestFixture;
     friend class MidiControllerTest;

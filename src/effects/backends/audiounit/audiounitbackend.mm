@@ -21,11 +21,30 @@
 /// An effects backend for Audio Unit (AU) plugins. macOS-only.
 class AudioUnitBackend : public EffectsBackend {
   public:
-    AudioUnitBackend() : m_componentsById([NSMutableDictionary dictionary]) {
+    AudioUnitBackend()
+            : m_componentsById([NSMutableDictionary dictionary]),
+              m_loadQueue([[NSOperationQueue alloc] init]) {
+        m_loadQueue.name = @"AudioUnitBackend manifest loader";
+        m_loadQueue.maxConcurrentOperationCount = kMaxConcurrentLoads;
         loadAudioUnits();
     }
 
     ~AudioUnitBackend() override {
+        // A block still running when this destructor starts must not be
+        // allowed to keep running past it -- it captures `this` and writes
+        // into m_manifestsById/m_mutex, both about to be freed (confirmed
+        // via a real crash: a straggler from an earlier, already-destroyed
+        // AudioUnitBackend dereferenced its now-freed `this`, SIGSEGV
+        // inside a QSharedPointer's atomic refcount). cancelAllOperations
+        // drops anything not yet started (the usual case: loadAudioUnits()
+        // already gave up waiting on most of a large backlog after
+        // kLoadTimeoutMs), so this only ever blocks for however long the
+        // handful of operations already mid-flight take to finish --
+        // bounded by AudioUnitManifest's own ~2s internal timeout, not by
+        // the full backlog size the way waiting on m_loadQueue itself
+        // (rather than cancelling first) would be.
+        [m_loadQueue cancelAllOperations];
+        [m_loadQueue waitUntilAllOperationsAreFinished];
     }
 
     EffectBackendType getType() const override {
@@ -61,9 +80,33 @@ class AudioUnitBackend : public EffectsBackend {
     }
 
   private:
+    // Limit concurrent manifest loads: each one blocks its thread in
+    // waitForAudioUnit for up to 2 seconds, and m_loadQueue spins up a real
+    // OS thread per concurrent operation, so an unbounded count here would
+    // still spin up as many threads as there are AUs (64+ is common) all
+    // at once.
+    static constexpr NSInteger kMaxConcurrentLoads = 8;
+
     NSMutableDictionary<NSString*, AVAudioUnitComponent*>* m_componentsById;
     QHash<QString, EffectManifestPointer> m_manifestsById;
     QMutex m_mutex;
+    // A dedicated NSOperationQueue, not GCD's shared global concurrent
+    // queue -- this is the whole reason this uses NSOperationQueue instead
+    // of the dispatch_group/dispatch_semaphore combination the rest of
+    // this codebase's Apple-API code otherwise prefers. Every
+    // AudioUnitBackend constructed over this process's lifetime (once per
+    // test fixture in the full test suite: 137+ times) used to queue its
+    // manifest-load blocks onto the one shared global queue, each block
+    // blocking its worker thread for up to 2s; confirmed via a real hang
+    // that this exhausts the OS's shared worker-thread pool once enough
+    // instances' backlogs overlap -- every worker ends up parked waiting on
+    // a semaphore with no thread left free to ever signal it, a permanent
+    // deadlock. A private NSOperationQueue gets its own dedicated pool
+    // (explicitly designed by Apple to tolerate long-blocking operations),
+    // so blocking here never competes with any other AudioUnitBackend
+    // instance's queue or the rest of the app for the same limited shared
+    // pool.
+    NSOperationQueue* m_loadQueue;
 
     void loadAudioUnits() {
         qDebug() << "Loading audio units...";
@@ -96,19 +139,13 @@ class AudioUnitBackend : public EffectsBackend {
         }
 
         // Load component manifests (parameters etc.) concurrently since this
-        // requires instantiating the corresponding Audio Units. We use Grand
-        // Central Dispatch (GCD) for this instead of Qt's threading facilities
-        // since GCD is a bit more lightweight and generally preferred for
-        // Apple API-related stuff.
+        // requires instantiating the corresponding Audio Units. m_loadQueue
+        // is a private NSOperationQueue (not GCD's shared global queue --
+        // see its declaration comment for why), with its own
+        // maxConcurrentOperationCount already capping concurrency, so no
+        // separate semaphore is needed here the way a shared GCD queue
+        // would require.
         dispatch_group_t group = dispatch_group_create();
-
-        // Limit concurrent manifest loads to avoid exhausting the GCD thread
-        // pool. Each manifest load blocks its thread in waitForAudioUnit for
-        // up to 2 seconds, so without a limit, having 64+ AUs would hit
-        // the macOS dispatch thread soft limit and crash the process.
-        const long MAX_CONCURRENT_LOADS = 8;
-        dispatch_semaphore_t semaphore =
-                dispatch_semaphore_create(MAX_CONCURRENT_LOADS);
 
         for (AVAudioUnitComponent* component in allComponents) {
             qDebug() << "Found audio unit" << [component name];
@@ -122,13 +159,8 @@ class AudioUnitBackend : public EffectsBackend {
             // Register component
             m_componentsById[effectId.toNSString()] = component;
 
-            // Use a concurrent background GCD queue to load manifest
-            dispatch_queue_t queue = dispatch_get_global_queue(
-                    DISPATCH_QUEUE_PRIORITY_DEFAULT, 0);
-
-            dispatch_group_async(group, queue, ^{
-                dispatch_semaphore_wait(semaphore, DISPATCH_TIME_FOREVER);
-
+            dispatch_group_enter(group);
+            [m_loadQueue addOperationWithBlock:^{
                 // Load manifest (potentially slow blocking operation)
                 auto manifest = EffectManifestPointer(
                         new AudioUnitManifest(effectId, component));
@@ -138,8 +170,8 @@ class AudioUnitBackend : public EffectsBackend {
                 m_manifestsById[effectId] = manifest;
                 locker.unlock();
 
-                dispatch_semaphore_signal(semaphore);
-            });
+                dispatch_group_leave(group);
+            }];
         }
 
         const int64_t TIMEOUT_MS = 6000;

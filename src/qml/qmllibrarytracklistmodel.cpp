@@ -10,6 +10,7 @@
 
 #include "library/basetracktablemodel.h"
 #include "library/columncache.h"
+#include "library/starrating.h"
 #include "moc_qmllibrarytracklistmodel.cpp"
 #include "qml/asyncimageprovider.h"
 #include "qml/qmlconfigproxy.h"
@@ -58,7 +59,8 @@ QmlLibraryTrackListModel::QmlLibraryTrackListModel(
                 pColumn->preferredWidth(),
                 pColumn->autoHideWidth(),
                 pColumn->delegate(),
-                pColumn->role()));
+                pColumn->role(),
+                pColumn->hidden()));
     }
 
     auto* pTrackModel = dynamic_cast<TrackModel*>(pModel);
@@ -243,6 +245,23 @@ void QmlLibraryTrackListModel::hideTrack(int row) {
         return;
     }
     pTrackModel->hideTracks({sourceModel()->index(row, 0)});
+}
+
+int QmlLibraryTrackListModel::ratingStarCount(int row) const {
+    auto* const pTrackTableModel = qobject_cast<BaseTrackTableModel*>(sourceModel());
+    if (pTrackTableModel == nullptr) {
+        return 0;
+    }
+    const int fieldIdx = pTrackTableModel->fieldIndex(ColumnCache::COLUMN_LIBRARYTABLE_RATING);
+    if (fieldIdx < 0) {
+        return 0;
+    }
+    const QVariant value = QIdentityProxyModel::data(
+            index(row, fieldIdx), Qt::DisplayRole);
+    if (!value.canConvert<StarRating>()) {
+        return 0;
+    }
+    return value.value<StarRating>().starCount();
 }
 
 void QmlLibraryTrackListModel::reloadTrackMetadata(int row) {

@@ -58,6 +58,61 @@ Item {
         key: "bpm"
     }
     Mixxx.ControlProxy {
+        id: keylockControl
+
+        group: root.group
+        key: "keylock"
+    }
+    // Total semitone offset from the track's file key (KeyControl's
+    // "pitch" CO, -6..+6, out-of-bounds allowed). Written directly by the
+    // -/+ transpose buttons and the target-key picker -- this fork's
+    // KeyControl has no pitch_up/pitch_down button COs to reuse.
+    Mixxx.ControlProxy {
+        id: pitchControl
+
+        group: root.group
+        key: "pitch"
+    }
+    // Effective (post-transpose) key as a ChromaticKey number, kept
+    // up to date by KeyControl as pitch/rate change. 1-12 = C..B major,
+    // 13-24 = C..B minor, both chromatically ascending (src/proto/keys.proto).
+    Mixxx.ControlProxy {
+        id: engineKeyControl
+
+        group: root.group
+        key: "key"
+    }
+
+    // Display names indexed by ChromaticKey value (index 0 = INVALID).
+    // Deliberately a fixed traditional-notation table rather than the
+    // config-dependent KeyUtils notation, matching the mockup ("Cm").
+    readonly property var keyNames: ["--",
+        "C", "Db", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B",
+        "Cm", "C#m", "Dm", "Ebm", "Em", "Fm", "F#m", "Gm", "G#m", "Am", "Bbm", "Bm"]
+
+    readonly property int effectiveKey: {
+        const k = Math.round(engineKeyControl.value);
+        return (k >= 1 && k <= 24) ? k : 0;
+    }
+    readonly property string effectiveKeyText: keyNames[effectiveKey]
+
+    // Transpose the track so its effective key becomes targetKey,
+    // taking the shortest path (delta wrapped to -5..+6 semitones).
+    function transposeToKey(targetKey) {
+        if (effectiveKey === 0 || targetKey === 0) {
+            return;
+        }
+        const currentPc = (effectiveKey - 1) % 12;
+        const targetPc = (targetKey - 1) % 12;
+        let delta = (targetPc - currentPc) % 12;
+        if (delta > 6) {
+            delta -= 12;
+        } else if (delta < -5) {
+            delta += 12;
+        }
+        pitchControl.value = pitchControl.value + delta;
+    }
+    Mixxx.ControlProxy {
         id: durationControl
 
         group: root.group
@@ -181,7 +236,11 @@ Item {
                     }
                 }
             }
-            // UDTR
+            // UDTR -- per DeckTimeKeyMockup.qml (110x99): BPM keeps the
+            // left ~42% at full height; the right ~58% splits vertically
+            // into the big KEY readout with the keylock toggle (top,
+            // weight 35) and a key-controls row (bottom, weight 21) with
+            // semitone -/+ transpose and a target-key picker.
             RowLayout {
                 Layout.fillHeight: true
                 Layout.fillWidth: true
@@ -190,15 +249,150 @@ Item {
 
                 InfoCell {
                     Layout.fillWidth: true
-                    Layout.preferredWidth: 50
+                    Layout.preferredWidth: 42
                     label: "BPM"
                     value: root.trackLoaded && bpmControl.value > 0 ? bpmControl.value.toFixed(1) : "--"
                 }
-                InfoCell {
+                ColumnLayout {
+                    Layout.fillHeight: true
                     Layout.fillWidth: true
-                    Layout.preferredWidth: 50
-                    label: "KEY"
-                    value: root.trackLoaded && root.currentTrack?.keyText ? root.currentTrack.keyText : "--"
+                    Layout.preferredWidth: 58
+                    spacing: 2
+
+                    // Big KEY readout + keylock toggle. Shows the
+                    // EFFECTIVE key (post-transpose, from the "key" CO),
+                    // not the file key -- the whole point of the controls
+                    // below is that these can differ.
+                    RowLayout {
+                        Layout.fillHeight: true
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 35
+                        spacing: 2
+
+                        ColumnLayout {
+                            Layout.fillHeight: true
+                            Layout.fillWidth: true
+                            spacing: 0
+
+                            Label {
+                                color: Theme.deckTextSecondary
+                                font.family: Theme.fontFamily
+                                font.pixelSize: 9
+                                text: "KEY"
+                            }
+                            Label {
+                                Layout.fillWidth: true
+                                color: Theme.deckTextBright
+                                elide: Text.ElideRight
+                                font.bold: true
+                                font.family: Theme.fontFamily
+                                font.pixelSize: 17
+                                text: root.trackLoaded ? root.effectiveKeyText : "--"
+                            }
+                        }
+                        // Keylock: lock icon, accent-lit when engaged.
+                        // All colors derived from the deck's own accent
+                        // (per the user: mockup colors were arrangement
+                        // guidance only; real colors follow the deck's
+                        // theme).
+                        Rectangle {
+                            Layout.alignment: Qt.AlignVCenter
+                            border.color: keylockControl.value ? root.accentColor : "transparent"
+                            border.width: 1
+                            color: keylockControl.value ? Qt.darker(root.accentColor, 1.5) : Qt.darker(root.accentColor, 3.2)
+                            height: 20
+                            radius: 3
+                            width: 20
+
+                            Image {
+                                anchors.centerIn: parent
+                                fillMode: Image.PreserveAspectFit
+                                height: 13
+                                opacity: keylockControl.value ? 1.0 : 0.55
+                                source: keylockControl.value ? "lock-closed.svg" : "lock-open.svg"
+                                width: 12
+                            }
+                            MouseArea {
+                                anchors.fill: parent
+
+                                onClicked: keylockControl.value = keylockControl.value ? 0 : 1
+                            }
+                        }
+                    }
+                    // Key-controls row: semitone -/+ and target-key picker.
+                    RowLayout {
+                        Layout.fillHeight: true
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 21
+                        spacing: 2
+
+                        KeyMiniCell {
+                            Layout.fillHeight: true
+                            Layout.fillWidth: true
+                            Layout.preferredWidth: 50
+
+                            RowLayout {
+                                anchors.centerIn: parent
+                                spacing: 3
+
+                                KeyMiniButton {
+                                    enabled: root.trackLoaded
+                                    text: "−"
+
+                                    onClicked: pitchControl.value = pitchControl.value - 1
+                                }
+                                KeyMiniButton {
+                                    enabled: root.trackLoaded
+                                    text: "+"
+
+                                    onClicked: pitchControl.value = pitchControl.value + 1
+                                }
+                            }
+                        }
+                        KeyMiniCell {
+                            id: keyPickerCell
+
+                            Layout.fillHeight: true
+                            Layout.fillWidth: true
+                            Layout.preferredWidth: 50
+
+                            Label {
+                                anchors.centerIn: parent
+                                color: Theme.deckTextBright
+                                font.family: Theme.fontFamily
+                                font.pixelSize: 10
+                                text: (root.trackLoaded ? root.effectiveKeyText : "--") + " ⌄"
+                            }
+                            MouseArea {
+                                anchors.fill: parent
+                                enabled: root.trackLoaded && root.effectiveKey !== 0
+
+                                onClicked: keyPickerMenu.popup()
+                            }
+                            // Lists the 12 keys of the SAME mode as the
+                            // current effective key (transposing shifts
+                            // pitch class, never major<->minor); picking
+                            // one computes the shortest semitone delta
+                            // and applies it via the pitch CO.
+                            Menu {
+                                id: keyPickerMenu
+
+                                Repeater {
+                                    model: 12
+
+                                    MenuItem {
+                                        readonly property int chromaticKey: (root.effectiveKey > 12 ? 13 : 1) + index
+
+                                        checkable: true
+                                        checked: chromaticKey === root.effectiveKey
+                                        text: root.keyNames[chromaticKey]
+
+                                        onTriggered: root.transposeToKey(chromaticKey)
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -272,6 +466,43 @@ Item {
             font.family: Theme.fontFamily
             font.pixelSize: 12
             text: parent.value
+        }
+    }
+
+    // Subtly-boxed container for the small key controls under the KEY
+    // readout (DeckTimeKeyMockup.qml's two lower mini-cells). Colors
+    // derive from the deck's own accent so both cells always match the
+    // deck's theme (the mockup's literal colors were arrangement
+    // guidance only, per the user).
+    component KeyMiniCell: Rectangle {
+        color: Qt.darker(root.accentColor, 3.2)
+        radius: 2
+    }
+
+    component KeyMiniButton: Rectangle {
+        property alias text: buttonLabel.text
+        signal clicked
+
+        color: buttonMouseArea.pressed ? Qt.lighter(root.accentColor, 1.4) : root.accentColor
+        height: 13
+        radius: 2
+        width: 16
+
+        Label {
+            id: buttonLabel
+
+            anchors.centerIn: parent
+            color: Theme.deckTextColor
+            font.bold: true
+            font.family: Theme.fontFamily
+            font.pixelSize: 10
+        }
+        MouseArea {
+            id: buttonMouseArea
+
+            anchors.fill: parent
+
+            onClicked: parent.clicked()
         }
     }
 }

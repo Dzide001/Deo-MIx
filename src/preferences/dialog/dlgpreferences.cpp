@@ -44,6 +44,10 @@
 #include "preferences/dialog/dlgprefaistemseparation.h"
 #endif // __AI_STEM_SEPARATION__
 
+#ifdef __AI_LYRIC_TRANSCRIPTION__
+#include "preferences/dialog/dlgprefailyrictranscription.h"
+#endif // __AI_LYRIC_TRANSCRIPTION__
+
 #include "preferences/dialog/dlgprefbeats.h"
 #include "preferences/dialog/dlgprefkey.h"
 #include "preferences/dialog/dlgprefrecord.h"
@@ -234,6 +238,14 @@ DlgPreferences::DlgPreferences(
             tr("AI Stem Separation"),
             "ic_preferences_effects.svg");
 #endif // __AI_STEM_SEPARATION__
+
+#ifdef __AI_LYRIC_TRANSCRIPTION__
+    addPageWidget(PreferencesPage(
+                          new DlgPrefAiLyricTranscription(this, m_pConfig),
+                          new QTreeWidgetItem(contentsTreeWidget, QTreeWidgetItem::Type)),
+            tr("AI Lyric Transcription"),
+            "ic_preferences_effects.svg");
+#endif // __AI_LYRIC_TRANSCRIPTION__
 
     addPageWidget(PreferencesPage(
                           new DlgPrefBeats(this, m_pConfig),

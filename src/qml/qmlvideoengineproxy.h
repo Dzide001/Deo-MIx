@@ -35,6 +35,11 @@ class QmlVideoEngineProxy : public QObject {
     Q_OBJECT
     Q_PROPERTY(bool available READ isAvailable CONSTANT)
     Q_PROPERTY(bool enabled READ isEnabled WRITE setEnabled NOTIFY enabledChanged)
+    /// M12 Stage 6: true only when this build was actually compiled with
+    /// -DVIDEO_ENGINE_NDI_OUTPUT=ON -- a compile-time constant, not
+    /// runtime state, so QML can decide whether to show any NDI-related
+    /// UI at all (matching `available`'s role for the base video engine).
+    Q_PROPERTY(bool ndiOutputAvailable READ isNdiOutputAvailable CONSTANT)
     QML_NAMED_ELEMENT(VideoEngine)
     QML_SINGLETON
   public:
@@ -44,6 +49,13 @@ class QmlVideoEngineProxy : public QObject {
     static QmlVideoEngineProxy* create(QQmlEngine* pQmlEngine, QJSEngine* pJsEngine);
 
     bool isAvailable() const;
+    bool isNdiOutputAvailable() const {
+#ifdef __VIDEO_ENGINE_NDI_OUTPUT__
+        return true;
+#else
+        return false;
+#endif
+    }
     bool isEnabled() const;
     void setEnabled(bool enabled);
 
@@ -58,6 +70,16 @@ class QmlVideoEngineProxy : public QObject {
     /// false). See VideoEngineManager::setCameraSource() for what this
     /// does and doesn't change about the crossfade/compositor model.
     Q_INVOKABLE bool setCameraSource(const QString& deckGroup, bool enabled);
+
+    /// M12 Stage 6: starts or stops advertising the composited preview as
+    /// an NDI network source named `sourceName` (not per-deck -- this is
+    /// the same composite the in-app preview window shows). Always
+    /// declared/callable from QML regardless of build flags, matching
+    /// loadVideo()'s convention: returns false (rather than not existing)
+    /// when this build wasn't compiled with -DVIDEO_ENGINE_NDI_OUTPUT=ON,
+    /// or if the underlying NDI SDK/runtime isn't available on this
+    /// machine. See VideoEngineManager::enableNdiOutput()/NdiOutputSender.
+    Q_INVOKABLE bool enableNdiOutput(bool enabled, const QString& sourceName);
 
     static inline std::shared_ptr<mixxx::VideoEngineManager> s_pVideoEngineManager;
 

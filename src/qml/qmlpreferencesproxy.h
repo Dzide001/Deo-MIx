@@ -2,11 +2,15 @@
 
 #include <QDialog>
 #include <QObject>
+#include <QPointer>
 #include <QQmlEngine>
 #include <QVideoSink>
 #include <memory>
 #include <optional>
 
+// Full definition (not just a forward declaration) needed for
+// QPointer<Controller>, which static_casts QObject* to Controller*.
+#include "controllers/controller.h"
 #include "controllers/controllermappinginfo.h"
 #include "controllers/controllermappinginfoenumerator.h"
 #include "controllers/legacycontrollermapping.h"
@@ -287,7 +291,7 @@ class QmlControllerDeviceProxy : public QObject {
     Q_INVOKABLE void clear();
 
     Controller* internal() const {
-        return m_pInternal;
+        return m_pInternal.data();
     }
 
     std::shared_ptr<LegacyControllerMapping> instanceFor(const QString& mappingPath) const;
@@ -318,7 +322,14 @@ class QmlControllerDeviceProxy : public QObject {
     QString m_editedFriendlyName;
     QUrl m_editedVisualUrl;
     std::optional<bool> m_enabled;
-    Controller* m_pInternal;
+    /// QPointer, not a raw pointer: the wrapped Controller lives on the
+    /// ControllerManager thread and gets destroyed whenever a rescan
+    /// replaces the device list. refreshKnownDevices() prunes this proxy
+    /// on the next deviceListChanged, but QML can still read properties
+    /// in between -- the guards in the accessors turn what used to be a
+    /// use-after-free (real crash, root-caused via lldb) into a benign
+    /// default value.
+    QPointer<Controller> m_pInternal;
     std::optional<ProductInfo> m_productInfo;
     QSet<QmlControllerMappingProxy*> m_mappings;
     QmlControllerMappingProxy* m_pMapping;

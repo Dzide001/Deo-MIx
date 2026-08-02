@@ -292,6 +292,10 @@ Popup {
                     }
                     Settings.Analyzer {
                     }
+                    Settings.AiStemSeparation {
+                    }
+                    Settings.AiLyricTranscription {
+                    }
                     Settings.StatsPerformance {
                     }
                 }

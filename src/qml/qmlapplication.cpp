@@ -23,7 +23,11 @@
 #include "qml/qmldlgpreferencesproxy.h"
 #include "qml/qmlrecordingproxy.h"
 #include "qml/qmlstemseparationproxy.h"
+#include "qml/qmlcdgpreviewitem.h"
+#include "qml/qmlkaraokemanagerproxy.h"
+#include "qml/qmllyrictranscriptionproxy.h"
 #include "qml/qmlvideoengineproxy.h"
+#include "qml/qmlvideopreviewglitem.h"
 #include "qml/qmlvideopreviewitem.h"
 #include "soundio/soundmanager.h"
 #include "util/versionstore.h"
@@ -195,6 +199,16 @@ QmlApplication::QmlApplication(
             m_pCoreServices->getVideoEngineManager();
     mixxx::qml::QmlVideoPreviewItem::s_pVideoEngineManager =
             m_pCoreServices->getVideoEngineManager();
+    mixxx::qml::QmlVideoPreviewGlItem::s_pVideoEngineManager =
+            m_pCoreServices->getVideoEngineManager();
+#endif
+    mixxx::qml::QmlKaraokeManagerProxy::s_pKaraokeManager =
+            m_pCoreServices->getKaraokeManager();
+    mixxx::qml::QmlCdgPreviewItem::s_pKaraokeManager =
+            m_pCoreServices->getKaraokeManager();
+#ifdef __AI_LYRIC_TRANSCRIPTION__
+    mixxx::qml::QmlLyricTranscriptionProxy::s_pWhisperTranscriptionManager =
+            m_pCoreServices->getWhisperTranscriptionManager();
 #endif
 
     m_pMenuBar = std::make_unique<QMenuBar>();
@@ -292,6 +306,12 @@ QmlApplication::~QmlApplication() {
 #ifdef __VIDEO_ENGINE__
     mixxx::qml::QmlVideoEngineProxy::s_pVideoEngineManager.reset();
     mixxx::qml::QmlVideoPreviewItem::s_pVideoEngineManager.reset();
+    mixxx::qml::QmlVideoPreviewGlItem::s_pVideoEngineManager.reset();
+#endif
+    mixxx::qml::QmlKaraokeManagerProxy::s_pKaraokeManager.reset();
+    mixxx::qml::QmlCdgPreviewItem::s_pKaraokeManager.reset();
+#ifdef __AI_LYRIC_TRANSCRIPTION__
+    mixxx::qml::QmlLyricTranscriptionProxy::s_pWhisperTranscriptionManager.reset();
 #endif
     QmlDlgPreferencesProxy::s_pInstance.reset();
     m_visualsManager.reset();

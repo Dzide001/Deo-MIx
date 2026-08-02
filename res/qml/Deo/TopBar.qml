@@ -103,6 +103,55 @@ Rectangle {
             font.family: Theme.fontFamily
             font.pixelSize: 10
         }
+        // M14 Stage 4: karaoke mode toggle -- same Item+MouseArea shape as
+        // the settings gear right after it (see that item's own comment
+        // for why a plain MouseArea is used instead of relying on
+        // Skin.Button/AbstractButton's own click handling).
+        // karaokeModeEnabled is a real Q_PROPERTY with NOTIFY (unlike
+        // KaraokeManager's plain Q_INVOKABLE query methods elsewhere in
+        // this feature), so binding `highlight` directly to it is safe
+        // and stays live.
+        Item {
+            Layout.preferredHeight: 24
+            Layout.preferredWidth: 32
+
+            Skin.Button {
+                anchors.centerIn: parent
+                activeColor: Theme.deckActiveColor
+                highlight: Mixxx.KaraokeManager.karaokeModeEnabled
+                implicitHeight: 20
+                implicitWidth: 20
+                text: "🎤"
+            }
+            MouseArea {
+                anchors.fill: parent
+
+                onClicked: Mixxx.KaraokeManager.karaokeModeEnabled = !Mixxx.KaraokeManager.karaokeModeEnabled
+            }
+        }
+        // M14 Stage 6: picks which physical display
+        // KaraokeDisplayWindow.qml (the singer-facing second screen)
+        // shows on -- only useful (and only shown) once karaoke mode is
+        // on and there's actually more than one screen to choose between.
+        //
+        // M16 fix: this was the plain QtQuick.Controls ComboBox, whose
+        // default OS-style padding/implicitHeight (~40px) massively
+        // overflowed the 26px-tall bar -- Skin.ComboBox (res/qml/
+        // ComboBox.qml) is this skin's own compact-styled equivalent,
+        // already used throughout Settings/*.qml, sized here to match the
+        // bar's other controls.
+        Skin.ComboBox {
+            Layout.preferredHeight: 20
+            Layout.preferredWidth: 110
+            clip: true
+            model: Qt.application.screens.map((screen, i) => (i + 1) + ": " + screen.name)
+            visible: Mixxx.KaraokeManager.karaokeModeEnabled && Qt.application.screens.length > 1
+            currentIndex: Mixxx.KaraokeManager.karaokeDisplayScreenIndex
+
+            onActivated: index => {
+                Mixxx.KaraokeManager.karaokeDisplayScreenIndex = index;
+            }
+        }
         // Item wrapper + explicit MouseArea, not just Skin.Button's own
         // AbstractButton click handling -- diagnostic testing found the
         // bare 20x20 Skin.Button's own click delivery unreliable here

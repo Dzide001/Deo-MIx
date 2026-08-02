@@ -85,6 +85,206 @@ Rectangle {
         anchors.top: searchField.bottom
         syncView: view
 
+        // M7/column-visibility: right-click any visible column's header to
+        // show/hide any of the real columns (including currently-hidden
+        // ones -- necessary since a hidden column has no header cell of
+        // its own to right-click on). One shared menu, not per-column,
+        // matching CustomActionPicker.qml's own "one shared popup, opened
+        // by whichever thing was clicked" precedent from the pad-bank
+        // feature. Hand-written entries rather than a Repeater over
+        // `view.model.columns` -- looked up by columnIdx (Mixxx.TrackListColumn.SQLColumns.*)
+        // rather than assuming array position, so this stays correct even
+        // if SourceTree.qml's column order changes later.
+        //
+        // checked/text are set imperatively (onAboutToShow, and again
+        // inside each item's own onTriggered) rather than via a live
+        // `checked: !column.hidden` binding -- `hidden` is a plain MEMBER
+        // property with no NOTIFY signal (same as the existing
+        // preferredWidth resize path below), and Qt Quick Controls'
+        // checkable MenuItem overwrites `checked` as a concrete value the
+        // first time it's clicked, which would silently break a live
+        // binding on the very first toggle.
+        Menu {
+            id: columnVisibilityMenu
+
+            function findColumn(sqlColumnEnum) {
+                if (!view.model) {
+                    return null;
+                }
+                for (let i = 0; i < view.model.columns.length; i++) {
+                    if (view.model.columns[i].columnIdx === sqlColumnEnum) {
+                        return view.model.columns[i];
+                    }
+                }
+                return null;
+            }
+            // Refuses to hide the LAST currently-visible column -- with
+            // none left, there would be no header cell left to right-click
+            // to ever bring this menu back.
+            function toggleColumn(menuItem, sqlColumnEnum) {
+                const col = columnVisibilityMenu.findColumn(sqlColumnEnum);
+                if (!col) {
+                    return;
+                }
+                if (!col.hidden) {
+                    let visibleCount = 0;
+                    for (let i = 0; i < view.model.columns.length; i++) {
+                        if (!view.model.columns[i].hidden) {
+                            visibleCount++;
+                        }
+                    }
+                    if (visibleCount <= 1) {
+                        menuItem.checked = true;
+                        return;
+                    }
+                }
+                col.hidden = !col.hidden;
+                menuItem.checked = !col.hidden;
+                Mixxx.LibraryColumnSettings.setColumnHidden(col.columnIdx, col.hidden);
+                view.updateColumnSize();
+                view.forceLayout();
+            }
+
+            onAboutToShow: {
+                titleMenuItem.checked = !columnVisibilityMenu.findColumn(Mixxx.TrackListColumn.SQLColumns.Title).hidden;
+                artistMenuItem.checked = !columnVisibilityMenu.findColumn(Mixxx.TrackListColumn.SQLColumns.Artist).hidden;
+                albumMenuItem.checked = !columnVisibilityMenu.findColumn(Mixxx.TrackListColumn.SQLColumns.Album).hidden;
+                yearMenuItem.checked = !columnVisibilityMenu.findColumn(Mixxx.TrackListColumn.SQLColumns.Year).hidden;
+                bpmMenuItem.checked = !columnVisibilityMenu.findColumn(Mixxx.TrackListColumn.SQLColumns.Bpm).hidden;
+                keyMenuItem.checked = !columnVisibilityMenu.findColumn(Mixxx.TrackListColumn.SQLColumns.Key).hidden;
+                fileTypeMenuItem.checked = !columnVisibilityMenu.findColumn(Mixxx.TrackListColumn.SQLColumns.FileType).hidden;
+                bitrateMenuItem.checked = !columnVisibilityMenu.findColumn(Mixxx.TrackListColumn.SQLColumns.Bitrate).hidden;
+                genreMenuItem.checked = !columnVisibilityMenu.findColumn(Mixxx.TrackListColumn.SQLColumns.Genre).hidden;
+                composerMenuItem.checked = !columnVisibilityMenu.findColumn(Mixxx.TrackListColumn.SQLColumns.Composer).hidden;
+                commentMenuItem.checked = !columnVisibilityMenu.findColumn(Mixxx.TrackListColumn.SQLColumns.Comment).hidden;
+                durationMenuItem.checked = !columnVisibilityMenu.findColumn(Mixxx.TrackListColumn.SQLColumns.Duration).hidden;
+                dateAddedMenuItem.checked = !columnVisibilityMenu.findColumn(Mixxx.TrackListColumn.SQLColumns.DateAdded).hidden;
+                timesPlayedMenuItem.checked = !columnVisibilityMenu.findColumn(Mixxx.TrackListColumn.SQLColumns.TimesPlayed).hidden;
+                ratingMenuItem.checked = !columnVisibilityMenu.findColumn(Mixxx.TrackListColumn.SQLColumns.Rating).hidden;
+            }
+
+            MenuItem {
+                id: titleMenuItem
+
+                checkable: true
+                text: qsTr("Title")
+
+                onTriggered: columnVisibilityMenu.toggleColumn(titleMenuItem, Mixxx.TrackListColumn.SQLColumns.Title)
+            }
+            MenuItem {
+                id: artistMenuItem
+
+                checkable: true
+                text: qsTr("Artist")
+
+                onTriggered: columnVisibilityMenu.toggleColumn(artistMenuItem, Mixxx.TrackListColumn.SQLColumns.Artist)
+            }
+            MenuItem {
+                id: albumMenuItem
+
+                checkable: true
+                text: qsTr("Album")
+
+                onTriggered: columnVisibilityMenu.toggleColumn(albumMenuItem, Mixxx.TrackListColumn.SQLColumns.Album)
+            }
+            MenuItem {
+                id: yearMenuItem
+
+                checkable: true
+                text: qsTr("Year")
+
+                onTriggered: columnVisibilityMenu.toggleColumn(yearMenuItem, Mixxx.TrackListColumn.SQLColumns.Year)
+            }
+            MenuItem {
+                id: bpmMenuItem
+
+                checkable: true
+                text: qsTr("Bpm")
+
+                onTriggered: columnVisibilityMenu.toggleColumn(bpmMenuItem, Mixxx.TrackListColumn.SQLColumns.Bpm)
+            }
+            MenuItem {
+                id: keyMenuItem
+
+                checkable: true
+                text: qsTr("Key")
+
+                onTriggered: columnVisibilityMenu.toggleColumn(keyMenuItem, Mixxx.TrackListColumn.SQLColumns.Key)
+            }
+            MenuItem {
+                id: fileTypeMenuItem
+
+                checkable: true
+                text: qsTr("File Type")
+
+                onTriggered: columnVisibilityMenu.toggleColumn(fileTypeMenuItem, Mixxx.TrackListColumn.SQLColumns.FileType)
+            }
+            MenuItem {
+                id: bitrateMenuItem
+
+                checkable: true
+                text: qsTr("Bitrate")
+
+                onTriggered: columnVisibilityMenu.toggleColumn(bitrateMenuItem, Mixxx.TrackListColumn.SQLColumns.Bitrate)
+            }
+            MenuItem {
+                id: genreMenuItem
+
+                checkable: true
+                text: qsTr("Genre")
+
+                onTriggered: columnVisibilityMenu.toggleColumn(genreMenuItem, Mixxx.TrackListColumn.SQLColumns.Genre)
+            }
+            MenuItem {
+                id: composerMenuItem
+
+                checkable: true
+                text: qsTr("Composer")
+
+                onTriggered: columnVisibilityMenu.toggleColumn(composerMenuItem, Mixxx.TrackListColumn.SQLColumns.Composer)
+            }
+            MenuItem {
+                id: commentMenuItem
+
+                checkable: true
+                text: qsTr("Comment")
+
+                onTriggered: columnVisibilityMenu.toggleColumn(commentMenuItem, Mixxx.TrackListColumn.SQLColumns.Comment)
+            }
+            MenuItem {
+                id: durationMenuItem
+
+                checkable: true
+                text: qsTr("Duration")
+
+                onTriggered: columnVisibilityMenu.toggleColumn(durationMenuItem, Mixxx.TrackListColumn.SQLColumns.Duration)
+            }
+            MenuItem {
+                id: dateAddedMenuItem
+
+                checkable: true
+                text: qsTr("Date Added")
+
+                onTriggered: columnVisibilityMenu.toggleColumn(dateAddedMenuItem, Mixxx.TrackListColumn.SQLColumns.DateAdded)
+            }
+            MenuItem {
+                id: timesPlayedMenuItem
+
+                checkable: true
+                text: qsTr("Times Played")
+
+                onTriggered: columnVisibilityMenu.toggleColumn(timesPlayedMenuItem, Mixxx.TrackListColumn.SQLColumns.TimesPlayed)
+            }
+            MenuItem {
+                id: ratingMenuItem
+
+                checkable: true
+                text: qsTr("Rating")
+
+                onTriggered: columnVisibilityMenu.toggleColumn(ratingMenuItem, Mixxx.TrackListColumn.SQLColumns.Rating)
+            }
+        }
+
         delegate: Item {
             id: column
 
@@ -109,6 +309,14 @@ Rectangle {
                     }
                     view.model.sort(horizontalHeader.sortingColumn, horizontalHeader.sortingOrder);
                 }
+            }
+            MouseArea {
+                id: columnVisibilityHandler
+
+                acceptedButtons: Qt.RightButton
+                anchors.fill: parent
+
+                onClicked: columnVisibilityMenu.popup()
             }
             Text {
                 id: columnName

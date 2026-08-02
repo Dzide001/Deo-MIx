@@ -21,6 +21,14 @@
     <!-- Allow interacting with the microphone -->
     <key>com.apple.security.device.microphone</key>
     <true/>
+    <!-- Allow interacting with the camera (M12 video engine's camera
+         input, GStreamer avfvideosrc). Info.plist already declares
+         NSCameraUsageDescription, but that alone is not enough under
+         Hardened Runtime: without this entitlement tccd refuses to even
+         prompt for kTCCServiceCamera and the request is denied
+         silently. Verified against a tccd log capture. -->
+    <key>com.apple.security.device.camera</key>
+    <true/>
     <!-- Allow interacting with USB devices -->
     <key>com.apple.security.device.usb</key>
     <true/>

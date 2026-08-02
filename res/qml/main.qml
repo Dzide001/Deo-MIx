@@ -41,12 +41,17 @@ ApplicationWindow {
         }
     }
 
-    // M12 Stage 3e: a top-level sibling of the main layout, not nested
-    // inside it -- positioned with plain x/y (not anchors/Layout
-    // attachments) so it floats over the waveform area and can be dragged
-    // anywhere without any Layout re-flowing it back or resizing anything
-    // else when it shows/hides. See VideoPreviewPanel.qml.
+    // M12 Stage 3e/4b: a real, separate top-level Window (see
+    // VideoPreviewPanel.qml), not an item embedded in this window's own
+    // layout -- so it can never trigger a Layout re-flow here, and the
+    // user can resize/fullscreen/move it to another monitor independently
+    // of this window using the OS's own native window chrome.
     Deo.VideoPreviewPanel {
+    }
+    // M14 Stage 6: same real-top-level-Window pattern as
+    // VideoPreviewPanel.qml above -- visible only while karaoke mode is
+    // on (see the window's own `visible` binding).
+    Deo.KaraokeDisplayWindow {
     }
 
     ColumnLayout {
@@ -54,20 +59,25 @@ ApplicationWindow {
 
         // availableForPercentRows: root.height minus everything that
         // ISN'T part of the 14/47/36 percentage split below -- the 24px
-        // outer margins (12 top + 12 bottom), the three 12px spacings
-        // between these four rows (36px), and TopBar's own fixed height
-        // (26, not the original 32 -- trimmed leaner per explicit user
-        // request to match a compact single-row reference header). The
-        // percentage caps two blocks down previously summed to just 97%
-        // of raw root.height with none of that fixed overhead subtracted
-        // first, so the four rows structurally always demanded more
-        // height than the window actually had -- squeeze pressure that
-        // cascaded all the way down into DeckPanel's own body row, which
-        // is what was cutting off DC/DD's transport row and pitch fader.
-        // Dividing by 97 (not 100) turns 14/47/36 into weights of THIS
-        // smaller, correct base rather than assuming they already summed
-        // to 100.
-        readonly property real availableForPercentRows: root.height - 24 - 36 - 26
+        // outer margins (12 top + 12 bottom), the four 12px spacings
+        // between these five rows (48px, since M14's LyricDisplay row was
+        // inserted between TopBar and the waveform row), and TopBar's own
+        // fixed height (26, not the original 32 -- trimmed leaner per
+        // explicit user request to match a compact single-row reference
+        // header). The percentage caps two blocks down previously summed
+        // to just 97% of raw root.height with none of that fixed overhead
+        // subtracted first, so the four rows structurally always demanded
+        // more height than the window actually had -- squeeze pressure
+        // that cascaded all the way down into DeckPanel's own body row,
+        // which is what was cutting off DC/DD's transport row and pitch
+        // fader. Dividing by 97 (not 100) turns 14/47/36 into weights of
+        // THIS smaller, correct base rather than assuming they already
+        // summed to 100. LyricDisplay's own height isn't part of this
+        // overhead calculation -- it collapses to 0 when neither deck has
+        // lyrics loaded (the common, non-karaoke case), so only its
+        // spacing is accounted for here, not a fixed height for the row
+        // itself.
+        readonly property real availableForPercentRows: root.height - 24 - 48 - 26
 
         anchors.fill: parent
         anchors.margins: 12
@@ -78,6 +88,8 @@ ApplicationWindow {
         // deck_section (32%), browser_section (51%).
         Deo.TopBar {
             Layout.fillWidth: true
+        }
+        Deo.LyricDisplay {
         }
         ColumnLayout {
             Layout.fillWidth: true
@@ -227,12 +239,37 @@ ApplicationWindow {
         // share at the old weight, at this app's own default ~1100px
         // window height. Tried 36 (deck at 47), then 43 (deck at 40),
         // dialed to 45 (deck at 38).
-        Library {
+        RowLayout {
             Layout.fillWidth: true
             Layout.maximumHeight: Math.max(250, rootColumn.availableForPercentRows * (45 / 97))
             Layout.preferredHeight: Math.max(250, rootColumn.availableForPercentRows * (45 / 97))
             Layout.minimumHeight: 250
             clip: true
+            spacing: 8
+
+            Library {
+                Layout.fillHeight: true
+                Layout.fillWidth: true
+            }
+            // M14 Stage 5: singer queue, as a permanent sidebar next to
+            // the library rather than a popup dialog -- per explicit user
+            // request. Collapses to zero width (not just hidden) when
+            // karaoke mode is off, matching LyricDisplay.qml's own
+            // collapse-when-unneeded pattern, so it never affects the
+            // library's own width in ordinary (non-karaoke) use.
+            // karaokeModeEnabled is a real Q_PROPERTY with NOTIFY, so
+            // binding these Layout sizes directly to it (rather than
+            // needing a poll Timer, unlike KaraokeManager's plain
+            // Q_INVOKABLE query methods used elsewhere in this feature)
+            // stays live.
+            Deo.SingerQueuePanel {
+                Layout.fillHeight: true
+                Layout.maximumWidth: Mixxx.KaraokeManager.karaokeModeEnabled ? 280 : 0
+                Layout.minimumWidth: Mixxx.KaraokeManager.karaokeModeEnabled ? 280 : 0
+                Layout.preferredWidth: Mixxx.KaraokeManager.karaokeModeEnabled ? 280 : 0
+                clip: true
+                visible: Mixxx.KaraokeManager.karaokeModeEnabled
+            }
         }
     }
 }

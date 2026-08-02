@@ -1208,6 +1208,7 @@ add_library(
   src/control/controlttrotary.cpp
   src/controllers/controller.cpp
   src/controllers/controllerenumerator.cpp
+  src/controllers/controllerhotplugmonitor.cpp
   src/controllers/controllerinputmappingtablemodel.cpp
   src/controllers/controllerlearningeventfilter.cpp
   src/controllers/controllermanager.cpp
@@ -1435,6 +1436,9 @@ add_library(
   src/library/itunes/itunesplaylistmodel.cpp
   src/library/itunes/itunestrackmodel.cpp
   src/library/itunes/itunesxmlimporter.cpp
+  src/library/karaoke/cdgdecoder.cpp
+  src/library/karaoke/karaokemanager.cpp
+  src/library/karaoke/lrcparser.cpp
   src/library/library_prefs.cpp
   src/library/library.cpp
   src/library/librarycontrol.cpp
@@ -1532,6 +1536,8 @@ add_library(
   src/preferences/colorpaletteeditormodel.cpp
   src/preferences/colorpalettesettings.cpp
   src/preferences/colorpalettesettings.cpp
+  src/preferences/custompadsettings.cpp
+  src/preferences/librarycolumnsettings.cpp
   src/preferences/configobject.cpp
   src/preferences/constants.cpp
   src/preferences/dialog/dlgprefautodj.cpp
@@ -2288,13 +2294,13 @@ if(APPLE AND MACOS_BUNDLE)
   set(MIXXX_INSTALL_BINDIR "${CMAKE_INSTALL_BINDIR}")
   set(
     MACOS_BUNDLE_NAME
-    Mixxx
+    "Deo DJ"
     CACHE STRING
     "The macOS app bundle and executable name"
   )
   set(
     MACOS_BUNDLE_IDENTIFIER
-    org.mixxx.mixxx
+    org.deodj.deodj
     CACHE STRING
     "The macOS app bundle identifier"
   )
@@ -2871,6 +2877,7 @@ if(BUILD_TESTING)
     src/test/broadcastprofile_test.cpp
     src/test/broadcastsettings_test.cpp
     src/test/cache_test.cpp
+    src/test/cdgdecoder_test.cpp
     src/test/channelhandle_test.cpp
     src/test/chrono_clock_resolution_test.cpp
     src/test/colorconfig_test.cpp
@@ -2891,6 +2898,7 @@ if(BUILD_TESTING)
     src/test/cratestorage_test.cpp
     src/test/cue_test.cpp
     src/test/cuecontrol_test.cpp
+    src/test/custompadsettings_test.cpp
     src/test/dbconnectionpool_test.cpp
     src/test/dbidtest.cpp
     src/test/directorydaotest.cpp
@@ -2916,9 +2924,11 @@ if(BUILD_TESTING)
     src/test/keyutilstest.cpp
     src/test/lcstest.cpp
     src/test/learningutilstest.cpp
+    src/test/librarycolumnsettings_test.cpp
     src/test/libraryscannertest.cpp
     src/test/librarytest.cpp
     src/test/looping_control_test.cpp
+    src/test/lrcparser_test.cpp
     src/test/main.cpp
     src/test/mathutiltest.cpp
     src/test/matrixapitest.cpp
@@ -3969,27 +3979,34 @@ if(QML)
       src/qml/qmlbatteryproxy.cpp
       src/qml/qmlbeatsmodel.cpp
       src/qml/qmlbroadcastproxy.cpp
+      src/qml/qmlcdgpreviewitem.cpp
       src/qml/qmlchainpresetmodel.cpp
       src/qml/qmlconfigproxy.cpp
       src/qml/qmlconfigproxybase.cpp
       src/qml/qmlcontrolproxy.cpp
       src/qml/qmlcuesmodel.cpp
+      src/qml/qmlcustompadsettingsproxy.cpp
       src/qml/qmldlgpreferencesproxy.cpp
       src/qml/qmleffectmanifestparametersmodel.cpp
       src/qml/qmleffectslotproxy.cpp
       src/qml/qmleffectsmanagerproxy.cpp
+      src/qml/qmlkaraokemanagerproxy.cpp
       src/qml/qmlkeyutils.cpp
       src/qml/qmllegacylibraryitem.cpp
+      src/qml/qmllibrarycolumnsettingsproxy.cpp
       src/qml/qmllibraryproxy.cpp
       src/qml/qmllibrarysource.cpp
       src/qml/qmllibrarysourcetree.cpp
       src/qml/qmllibrarytracklistmodel.cpp
+      src/qml/qmllyrictranscriptionproxy.cpp
       src/qml/qmlmixxxcontrollerscreen.cpp
       src/qml/qmlplayermanagerproxy.cpp
       src/qml/qmlplayerproxy.cpp
       src/qml/qmlrecordingproxy.cpp
+      src/qml/qmlsingerqueuemodel.cpp
       src/qml/qmlstemseparationproxy.cpp
       src/qml/qmlvideoengineproxy.cpp
+      src/qml/qmlvideopreviewglitem.cpp
       src/qml/qmlvideopreviewitem.cpp
       src/qml/qmlsidebarmodelproxy.cpp
       src/qml/qmllibrarytracklistcolumn.cpp
@@ -4022,6 +4039,28 @@ if(QML)
       # needed for qml/qmlautoreload.cpp
       src/util/autofilereloader.cpp
   )
+
+  # M12 Stage 7: qmlvideopreviewglitem.cpp (added to the main source list
+  # above, always compiled the same as qmlvideopreviewitem.cpp) needs
+  # Qt's RHI headers (<rhi/qrhi.h>, <rhi/qrhi_platform.h> -- QRhiTexture,
+  # QRhiGles2NativeHandles) to wrap a foreign GL texture id, which live
+  # under Qt6's private-module include path even though the headers
+  # themselves are Q_GUI_EXPORT/meant for this kind of advanced use.
+  # Qt6::GuiPrivate is the existing project convention for this exact
+  # need (see src/rendergraph/opengl/CMakeLists.txt, which links it for
+  # <rhi/qshader.h>) -- it's available as soon as the Gui component
+  # itself is found, no separate find_package(... COMPONENTS GuiPrivate)
+  # call required.
+  target_link_libraries(mixxx-qml-lib PRIVATE Qt6::GuiPrivate)
+  if(APPLE)
+    # The native-CGL-context-extraction half of GL-context sharing with
+    # GStreamer (see VideoEngineManager's Stage 7 class doc comment) needs
+    # Objective-C++ -- isolated to this one small platform file rather
+    # than converting qmlvideopreviewglitem.cpp itself to .mm, matching
+    # this project's existing Apple-specific-file convention (e.g.
+    # src/util/darkappearance.mm above).
+    target_sources(mixxx-qml-lib PRIVATE src/qml/qmlvideopreviewglitem_mac.mm)
+  endif()
 
   if(STEM)
     target_compile_definitions(mixxx-qml-lib PUBLIC __STEM__)
@@ -4892,6 +4931,96 @@ endif()
 # being unavailable to QML, which would break the always-shipped M4 pad
 # grid for the common (feature-off) build.
 
+# M16 AI Lyric Transcription, Stage 1: standalone validation CLI only (no
+# mixxx-lib integration yet -- see src/whispertest/ and
+# milestone_16_lyric_transcription notes). Off by default, matching
+# AI_STEM_SEPARATION's own opt-in shape, but vendored via FetchContent
+# rather than a hand-copied snapshot (lib/demucsonnx/'s approach): whisper
+# .cpp is a much larger, actively-updated upstream project with its own
+# CMake build, GGML backend selection (Metal/Accelerate/BLAS all
+# auto-detected), and transitive deps -- better tracked as a real
+# dependency than copied files. Pinned to v1.7.6; verified by hand before
+# wiring this in (cloned standalone, built clean on this machine with
+# both Metal and Accelerate backends auto-detected, downloaded a real
+# ggml-base.en.bin model, and confirmed accurate, correctly-timestamped
+# word-level transcription output against whisper.cpp's own samples/jfk
+# .wav via `--max-len 1`/`token_timestamps`).
+#
+# WHISPER_STANDALONE (whisper.cpp's own CMakeLists.txt) is automatically
+# OFF when it's pulled in as a FetchContent subdirectory rather than the
+# top-level project, which already disables its example/test/server
+# targets by default -- the explicit overrides below are just
+# self-documenting insurance against that default ever changing upstream.
+option(
+  AI_LYRIC_TRANSCRIPTION
+  "On-demand local AI lyric transcription via whisper.cpp - standalone validation CLI"
+  OFF
+)
+if(AI_LYRIC_TRANSCRIPTION)
+  include(FetchContent)
+  set(WHISPER_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+  set(WHISPER_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+  set(WHISPER_BUILD_SERVER OFF CACHE BOOL "" FORCE)
+  FetchContent_Declare(
+    whispercpp
+    GIT_REPOSITORY https://github.com/ggerganov/whisper.cpp.git
+    GIT_TAG v1.7.6
+    GIT_SHALLOW TRUE
+  )
+  # GGML's CPU backend needs -ffast-math paired with -fno-finite-math-only
+  # (Clang's -ffast-math implies -ffinite-math-only, which breaks GGML's
+  # own NaN/Infinity-dependent routines -- upstream ref: llama.cpp#7154).
+  # The real source of -ffast-math here is this file's own top-level
+  # `add_compile_options(-ffast-math -funroll-loops)` (see the Release-
+  # build denormals comment near the top of this file) -- a *directory-
+  # scoped* option that every subdirectory added afterward inherits,
+  # including this one. A plain CMAKE_C_FLAGS/CXX_FLAGS append does NOT
+  # win here: those land earlier in the generated compile command than
+  # add_compile_options()'s own COMPILE_OPTIONS list, so the later
+  # -ffast-math still wins (confirmed by a real build failure with that
+  # approach). Fixed the same way it was caused: another
+  # add_compile_options() call, appended after the one at the top of this
+  # file so it lands after -ffast-math in the same options list -- saved/
+  # restored via the directory property directly (add_compile_options has
+  # no built-in "undo"), scoped to just this FetchContent call since
+  # nothing else in this build needs it.
+  get_directory_property(_mixxx_pre_whisper_compile_options COMPILE_OPTIONS)
+  add_compile_options(-fno-finite-math-only)
+  FetchContent_MakeAvailable(whispercpp)
+  set_directory_properties(PROPERTIES COMPILE_OPTIONS "${_mixxx_pre_whisper_compile_options}")
+
+  add_subdirectory(src/whispertest)
+
+  # M16 Stage 2: link the transcription pipeline into mixxx-lib itself
+  # (still opt-in only -- AI_LYRIC_TRANSCRIPTION stays default OFF).
+  # Everything here is guarded by __AI_LYRIC_TRANSCRIPTION__, mirroring
+  # AI_STEM_SEPARATION's own __AI_STEM_SEPARATION__ convention.
+  target_compile_definitions(mixxx-lib PUBLIC __AI_LYRIC_TRANSCRIPTION__)
+  target_sources(
+    mixxx-lib
+    PRIVATE
+      src/library/lyrictranscription/lrclibgetlyricstask.cpp
+      src/library/lyrictranscription/whisperlrcbuilder.cpp
+      src/library/lyrictranscription/whispertranscriptionjob.cpp
+      src/library/lyrictranscription/whispertranscriptionmanager.cpp
+      src/preferences/dialog/dlgprefailyrictranscriptiondlg.ui
+      src/preferences/dialog/dlgprefailyrictranscription.cpp
+  )
+  target_link_libraries(mixxx-lib PRIVATE whisper)
+  if(BUILD_TESTING)
+    target_sources(mixxx-test PRIVATE src/test/whispertranscriptionlrc_test.cpp)
+  endif()
+
+  # Same reasoning as AI_STEM_SEPARATION's own mixxx-qml-lib block above:
+  # mixxx-qml-lib doesn't link mixxx-lib, so mixxx-lib's PUBLIC
+  # __AI_LYRIC_TRANSCRIPTION__ definition never reaches it, and
+  # qmlapplication.cpp's QmlLyricTranscriptionProxy seeding call (compiled
+  # as part of mixxx-qml-lib) needs this defined independently.
+  if(TARGET mixxx-qml-lib)
+    target_compile_definitions(mixxx-qml-lib PUBLIC __AI_LYRIC_TRANSCRIPTION__)
+  endif()
+endif()
+
 # M12 video engine, Stage 1: standalone validation CLI only (no mixxx-lib
 # integration yet -- see src/videoengine/CMakeLists.txt and
 # milestone_12_video_spec_addendum.md at the repo root for the full staged
@@ -4969,7 +5098,11 @@ if(VIDEO_ENGINE)
       "${VIDEO_ENGINE_PLUGIN_DIR}/libgstvideotestsrc.a"
       "${VIDEO_ENGINE_PLUGIN_DIR}/libgstvideoconvertscale.a"
       "${VIDEO_ENGINE_PLUGIN_DIR}/libgstapp.a"
-      "${VIDEO_ENGINE_PLUGIN_DIR}/libgstcompositor.a"
+      # Stage 7: opengl (glupload/glcolorconvert -- see
+      # deckPipelineDescFor()) replaces compositor here, which nothing has
+      # referenced in any pipeline description since Stage 4 moved
+      # blending into C++.
+      "${VIDEO_ENGINE_PLUGIN_DIR}/libgstopengl.a"
       "${VIDEO_ENGINE_PLUGIN_DIR}/libgstplayback.a"
       "${VIDEO_ENGINE_PLUGIN_DIR}/libgsttypefindfunctions.a"
       "${VIDEO_ENGINE_PLUGIN_DIR}/libgstisomp4.a"
@@ -5013,6 +5146,70 @@ if(VIDEO_ENGINE)
   # preview pipeline did.
   if(TARGET mixxx-qml-lib)
     target_compile_definitions(mixxx-qml-lib PUBLIC __VIDEO_ENGINE__)
+  endif()
+
+  # M12 Stage 6: NDI output, sending the composited preview frame out over
+  # the network so external tools (OBS, vMix, a video wall) can pick it up
+  # via NDI, in addition to the in-app preview window. Same shape as
+  # VIDEO_ENGINE_GSTREAMER_ROOT/AI_STEM_SEPARATION's *_ROOT options above:
+  # off by default, points at a separately-built/downloaded SDK install
+  # kept outside MIXXX_VCPKG_ROOT. Deliberately NOT integrated via a
+  # GStreamer NDI plugin (gst-plugin-ndi exists but is a Rust/Cargo build
+  # with documented arm64-macOS build-maturity issues, a mismatch with this
+  # project's plain-C/C++ static-plugin-linking convention) -- instead
+  # calls the NDI SDK's own C send API directly from a small new class
+  # (NdiOutputSender), fed the same composited QImage
+  # VideoEngineManager::grabPreviewFrame() already produces for the
+  # in-app preview, no GStreamer pipeline changes needed. The NDI SDK
+  # itself is free to use but under a proprietary EULA (not open source;
+  # requires attribution/trademark compliance on redistribution -- see
+  # docs.ndi.video) -- the user downloads it from ndi.video and points
+  # this at wherever they installed it, same as GStreamer/ONNX Runtime.
+  set(
+    NDI_ROOT
+    ""
+    CACHE PATH
+    "Path to the NDI SDK install (from ndi.video) for VIDEO_ENGINE_NDI_OUTPUT"
+  )
+  default_option(
+    VIDEO_ENGINE_NDI_OUTPUT
+    "M12 Stage 6 NDI output - send the composited preview over NDI"
+    "NDI_ROOT"
+  )
+  if(VIDEO_ENGINE_NDI_OUTPUT)
+    if(NOT NDI_ROOT)
+      message(FATAL_ERROR "VIDEO_ENGINE_NDI_OUTPUT requires the NDI SDK (set -DNDI_ROOT=<path>)")
+    endif()
+    set(NDI_INCLUDE_DIR "${NDI_ROOT}/include")
+    set(NDI_HEADER "${NDI_INCLUDE_DIR}/Processing.NDI.Lib.h")
+    # Standard NDI SDK for Apple layout: a single universal (arm64+x86_64)
+    # dylib under lib/macOS/. If a future SDK version's layout differs,
+    # this is the one place to adjust -- the FATAL_ERROR below names the
+    # exact path it looked for, so a layout mismatch fails loudly with an
+    # actionable message rather than a confusing downstream link error.
+    set(NDI_LIBRARY "${NDI_ROOT}/lib/macOS/libndi.dylib")
+    if(NOT EXISTS "${NDI_HEADER}" OR NOT EXISTS "${NDI_LIBRARY}")
+      message(
+        FATAL_ERROR
+        "NDI_ROOT was set to \"${NDI_ROOT}\", but this is not a valid NDI SDK root.\n"
+        "Expected to find:\n"
+        "  ${NDI_HEADER}\n"
+        "  ${NDI_LIBRARY}\n"
+        "Please set NDI_ROOT to the NDI SDK's install root (the directory containing "
+        "include/ and lib/)."
+      )
+    endif()
+    target_compile_definitions(mixxx-lib PUBLIC __VIDEO_ENGINE_NDI_OUTPUT__)
+    target_include_directories(mixxx-lib PRIVATE "${NDI_INCLUDE_DIR}")
+    target_sources(mixxx-lib PRIVATE src/library/videoengine/ndioutputsender.cpp)
+    target_link_libraries(mixxx-lib PRIVATE "${NDI_LIBRARY}")
+    if(TARGET mixxx-qml-lib)
+      # QmlVideoEngineProxy's enableNdiOutput() wrapper needs this defined
+      # too, same __VIDEO_ENGINE__ dual-definition reasoning as above --
+      # mixxx-qml-lib doesn't link mixxx-lib, so the PUBLIC definition
+      # there doesn't reach it on its own.
+      target_compile_definitions(mixxx-qml-lib PUBLIC __VIDEO_ENGINE_NDI_OUTPUT__)
+    endif()
   endif()
 endif()
 

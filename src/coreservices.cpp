@@ -34,6 +34,10 @@
 #ifdef __VIDEO_ENGINE__
 #include "library/videoengine/videoenginemanager.h"
 #endif
+#include "library/karaoke/karaokemanager.h"
+#ifdef __AI_LYRIC_TRANSCRIPTION__
+#include "library/lyrictranscription/whispertranscriptionmanager.h"
+#endif
 #include "mixer/playerinfo.h"
 #include "mixer/playermanager.h"
 #include "moc_coreservices.cpp"
@@ -49,7 +53,9 @@
 #include <QSGRendererInterface>
 
 #include "qml/qmlconfigproxy.h"
+#include "qml/qmlcustompadsettingsproxy.h"
 #include "qml/qmleffectsmanagerproxy.h"
+#include "qml/qmllibrarycolumnsettingsproxy.h"
 #include "qml/qmllibraryproxy.h"
 #include "qml/qmlplayermanagerproxy.h"
 #include "qml/qmlpreferencesproxy.h"
@@ -634,6 +640,22 @@ void CoreServices::initialize(QApplication* pApp) {
 #ifdef __VIDEO_ENGINE__
     m_pVideoEngineManager = std::make_shared<mixxx::VideoEngineManager>(this);
 #endif
+    m_pKaraokeManager = std::make_shared<mixxx::KaraokeManager>(this);
+#ifdef __AI_LYRIC_TRANSCRIPTION__
+    m_pWhisperTranscriptionManager =
+            std::make_shared<mixxx::WhisperTranscriptionManager>(this, pConfig);
+    // A transcription job writes a .lrc file for a track that may already
+    // be loaded/playing -- that alone never fires PlayerInfo::
+    // trackChanged, so KaraokeManager needs an explicit nudge to re-check
+    // that deck's sidecar files once the file actually exists on disk.
+    connect(m_pWhisperTranscriptionManager.get(),
+            &mixxx::WhisperTranscriptionManager::finished,
+            m_pKaraokeManager.get(),
+            [this](const QString& deckGroup, const QString& lrcPath) {
+                Q_UNUSED(lrcPath);
+                m_pKaraokeManager->reloadLyricsForDeck(deckGroup);
+            });
+#endif
 
     m_pLibrary = std::make_shared<Library>(
             this,
@@ -828,6 +850,8 @@ void CoreServices::initializeQMLSingletons() {
     mixxx::qml::QmlEffectsManagerProxy::registerEffectsManager(getEffectsManager());
     mixxx::qml::QmlPlayerManagerProxy::registerPlayerManager(getPlayerManager());
     mixxx::qml::QmlConfigProxy::registerUserSettings(getSettings());
+    mixxx::qml::QmlCustomPadSettingsProxy::registerUserSettings(getSettings());
+    mixxx::qml::QmlLibraryColumnSettingsProxy::registerUserSettings(getSettings());
     mixxx::qml::QmlLibraryProxy::registerLibrary(getLibrary());
     mixxx::qml::QmlLibraryProxy::registerKeyboardEventFilter(getKeyboardEventFilter());
     mixxx::qml::QmlSoundManagerProxy::registerManager(getSoundManager());
@@ -925,6 +949,8 @@ void CoreServices::finalize() {
     mixxx::qml::QmlEffectsManagerProxy::registerEffectsManager(nullptr);
     mixxx::qml::QmlPlayerManagerProxy::registerPlayerManager(nullptr);
     mixxx::qml::QmlConfigProxy::registerUserSettings(nullptr);
+    mixxx::qml::QmlCustomPadSettingsProxy::registerUserSettings(nullptr);
+    mixxx::qml::QmlLibraryColumnSettingsProxy::registerUserSettings(nullptr);
     mixxx::qml::QmlLibraryProxy::registerLibrary(nullptr);
     mixxx::qml::QmlLibraryProxy::registerKeyboardEventFilter(nullptr);
     mixxx::qml::QmlSoundManagerProxy::registerManager(nullptr);
@@ -944,6 +970,15 @@ void CoreServices::finalize() {
     qDebug() << t.elapsed(false).debugMillisWithUnit() << "deleting VideoEngineManager";
     CLEAR_AND_CHECK_DELETED(m_pVideoEngineManager);
 #endif
+#ifdef __AI_LYRIC_TRANSCRIPTION__
+    // Torn down before KaraokeManager: its own destructor cancels/waits
+    // for any in-flight job, and its `finished` signal is connected to a
+    // lambda that touches m_pKaraokeManager.
+    qDebug() << t.elapsed(false).debugMillisWithUnit() << "deleting WhisperTranscriptionManager";
+    CLEAR_AND_CHECK_DELETED(m_pWhisperTranscriptionManager);
+#endif
+    qDebug() << t.elapsed(false).debugMillisWithUnit() << "deleting KaraokeManager";
+    CLEAR_AND_CHECK_DELETED(m_pKaraokeManager);
 
     // Stop all pending library operations
     qDebug() << t.elapsed(false).debugMillisWithUnit() << "stopping pending Library tasks";

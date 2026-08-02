@@ -104,321 +104,505 @@ Category {
         }
     }
 
-    Mixxx.SettingParameter {
-        label: "Server type"
-
-        Skin.ComboBox {
-            id: serverTypeField
-
-            model: [
-                {
-                    text: "Icecast 2",
-                    value: "Icecast2"
-                },
-                {
-                    text: "Shoutcast 1",
-                    value: "Shoutcast"
-                },
-                {
-                    text: "Icecast 1",
-                    value: "Icecast1"
-                }
-            ]
-            textRole: "text"
-            valueRole: "value"
-            width: 160
-
-            onActivated: {
-                root.hasChanges = true;
-                // Only auto-fill the login suggestion if it still matches
-                // the OTHER type's default -- don't clobber something the
-                // user typed themselves.
-                const otherDefault = currentValue === "Shoutcast" ? "source" : "admin";
-                if (loginField.text === "" || loginField.text === otherDefault) {
-                    loginField.text = root.defaultLoginForServerType(currentValue);
-                }
-            }
-        }
-    }
-    Mixxx.SettingParameter {
-        label: "Host"
-
-        Skin.TextField {
-            id: hostField
-
-            placeholderText: "stream.example.com (no http://)"
-            width: 220
-
-            onTextEdited: root.hasChanges = true
-        }
-    }
-    Mixxx.SettingParameter {
-        label: "Port"
-
-        Skin.TextField {
-            id: portField
-
-            validator: IntValidator {
-                bottom: 1
-                top: 65535
-            }
-            width: 80
-
-            onTextEdited: root.hasChanges = true
-        }
-    }
-    Mixxx.SettingParameter {
-        // Required for Icecast, unused for Shoutcast.
-        label: "Mount point"
-        visible: serverTypeField.currentValue !== "Shoutcast"
-
-        Skin.TextField {
-            id: mountField
-
-            width: 160
-
-            onTextEdited: root.hasChanges = true
-        }
-    }
-    Mixxx.SettingParameter {
-        label: "Login"
-
-        Skin.TextField {
-            id: loginField
-
-            width: 160
-
-            onTextEdited: root.hasChanges = true
-        }
-    }
-    Mixxx.SettingParameter {
-        label: "Password"
-
-        Skin.TextField {
-            id: passwordField
-
-            echoMode: TextInput.Password
-            width: 160
-
-            onTextEdited: root.hasChanges = true
-        }
-    }
-    Mixxx.SettingParameter {
-        label: "Format"
+    // M16 fix: every row below used to be a bare `Mixxx.SettingParameter`
+    // (which is invisible bookkeeping only -- see qmlsettingparameter.cpp,
+    // it just registers a search-index entry, it draws nothing and lays
+    // out nothing) wrapping the actual control directly, with no
+    // ColumnLayout/RowLayout anywhere on this page at all. Every row
+    // therefore defaulted to position (0, 0) and rendered stacked
+    // directly on top of each other -- confirmed against the working
+    // pattern used throughout SoundHardware.qml/Interface.qml, where each
+    // row is `RowLayout { Text { text: "Label"; Mixxx.SettingParameter {
+    // label: "Label" } }; <control> }`, all inside a top-level `ScrollView
+    // { ColumnLayout { ... } }`. Restructured to match that pattern
+    // exactly -- ScrollView here also fixes this page never having had
+    // room for all 18 fields plus the save row to begin with.
+    ScrollView {
+        anchors.fill: parent
 
         ColumnLayout {
-            spacing: 2
+            spacing: 8
+            width: parent.width
 
-            Skin.ComboBox {
-                id: formatField
+            RowLayout {
+                Text {
+                    Layout.fillWidth: true
+                    color: Theme.white
+                    font.pixelSize: 14
+                    text: "Server type"
 
-                model: [
-                    {
-                        text: "MP3",
-                        value: "MP3"
-                    },
-                    {
-                        text: "Ogg Vorbis",
-                        value: "OGG"
+                    Mixxx.SettingParameter {
+                        label: "Server type"
                     }
-                ]
-                textRole: "text"
-                valueRole: "value"
-                width: 140
+                }
+                Skin.ComboBox {
+                    id: serverTypeField
 
-                onActivated: root.hasChanges = true
+                    model: [
+                        {
+                            text: "Icecast 2",
+                            value: "Icecast2"
+                        },
+                        {
+                            text: "Shoutcast 1",
+                            value: "Shoutcast"
+                        },
+                        {
+                            text: "Icecast 1",
+                            value: "Icecast1"
+                        }
+                    ]
+                    textRole: "text"
+                    valueRole: "value"
+                    width: 160
+
+                    onActivated: {
+                        root.hasChanges = true;
+                        // Only auto-fill the login suggestion if it still matches
+                        // the OTHER type's default -- don't clobber something the
+                        // user typed themselves.
+                        const otherDefault = currentValue === "Shoutcast" ? "source" : "admin";
+                        if (loginField.text === "" || loginField.text === otherDefault) {
+                            loginField.text = root.defaultLoginForServerType(currentValue);
+                        }
+                    }
+                }
             }
-            Text {
-                color: "#B4453F"
-                font.pixelSize: 10
-                text: "Ogg streams don't support live artist/title metadata to listeners"
-                visible: formatField.currentValue === "OGG"
+            RowLayout {
+                Text {
+                    Layout.fillWidth: true
+                    color: Theme.white
+                    font.pixelSize: 14
+                    text: "Host"
+
+                    Mixxx.SettingParameter {
+                        label: "Host"
+                    }
+                }
+                Skin.TextField {
+                    id: hostField
+
+                    placeholderText: "stream.example.com (no http://)"
+                    width: 220
+
+                    onTextEdited: root.hasChanges = true
+                }
             }
-        }
-    }
-    Mixxx.SettingParameter {
-        label: "Bitrate (kbps)"
+            RowLayout {
+                Text {
+                    Layout.fillWidth: true
+                    color: Theme.white
+                    font.pixelSize: 14
+                    text: "Port"
 
-        Skin.TextField {
-            id: bitrateField
+                    Mixxx.SettingParameter {
+                        label: "Port"
+                    }
+                }
+                Skin.TextField {
+                    id: portField
 
-            validator: IntValidator {
-                bottom: 8
-                top: 320
+                    validator: IntValidator {
+                        bottom: 1
+                        top: 65535
+                    }
+                    width: 80
+
+                    onTextEdited: root.hasChanges = true
+                }
             }
-            width: 80
+            RowLayout {
+                // Required for Icecast, unused for Shoutcast.
+                visible: serverTypeField.currentValue !== "Shoutcast"
 
-            onTextEdited: root.hasChanges = true
-        }
-    }
-    Mixxx.SettingParameter {
-        label: "Stream name"
+                Text {
+                    Layout.fillWidth: true
+                    color: Theme.white
+                    font.pixelSize: 14
+                    text: "Mount point"
 
-        Skin.TextField {
-            id: streamNameField
+                    Mixxx.SettingParameter {
+                        label: "Mount point"
+                    }
+                }
+                Skin.TextField {
+                    id: mountField
 
-            width: 220
+                    width: 160
 
-            onTextEdited: root.hasChanges = true
-        }
-    }
-    Mixxx.SettingParameter {
-        label: "Stream description"
-
-        Skin.TextField {
-            id: streamDescField
-
-            width: 220
-
-            onTextEdited: root.hasChanges = true
-        }
-    }
-    Mixxx.SettingParameter {
-        label: "Stream genre"
-
-        Skin.TextField {
-            id: streamGenreField
-
-            width: 160
-
-            onTextEdited: root.hasChanges = true
-        }
-    }
-    Mixxx.SettingParameter {
-        label: "List publicly"
-
-        CheckBox {
-            id: streamPublicField
-
-            onToggled: root.hasChanges = true
-        }
-    }
-    Mixxx.SettingParameter {
-        label: "Custom metadata format"
-
-        Skin.TextField {
-            id: metadataFormatField
-
-            placeholderText: "%artist% - %title%"
-            width: 220
-
-            onTextEdited: root.hasChanges = true
-        }
-    }
-    Mixxx.SettingParameter {
-        label: "Custom artist override"
-
-        Skin.TextField {
-            id: customArtistField
-
-            width: 160
-
-            onTextEdited: root.hasChanges = true
-        }
-    }
-    Mixxx.SettingParameter {
-        label: "Custom title override"
-
-        Skin.TextField {
-            id: customTitleField
-
-            width: 160
-
-            onTextEdited: root.hasChanges = true
-        }
-    }
-    Mixxx.SettingParameter {
-        label: "Enable metadata"
-
-        CheckBox {
-            id: enableMetadataField
-
-            onToggled: root.hasChanges = true
-        }
-    }
-    Mixxx.SettingParameter {
-        label: "Auto-reconnect"
-
-        CheckBox {
-            id: enableReconnectField
-
-            onToggled: root.hasChanges = true
-        }
-    }
-    Mixxx.SettingParameter {
-        label: "Reconnect period (s)"
-
-        Skin.TextField {
-            id: reconnectPeriodField
-
-            validator: DoubleValidator {
-                bottom: 0
+                    onTextEdited: root.hasChanges = true
+                }
             }
-            width: 80
+            RowLayout {
+                Text {
+                    Layout.fillWidth: true
+                    color: Theme.white
+                    font.pixelSize: 14
+                    text: "Login"
 
-            onTextEdited: root.hasChanges = true
-        }
-    }
-    Mixxx.SettingParameter {
-        label: "Limit reconnect attempts"
+                    Mixxx.SettingParameter {
+                        label: "Login"
+                    }
+                }
+                Skin.TextField {
+                    id: loginField
 
-        CheckBox {
-            id: limitReconnectsField
+                    width: 160
 
-            onToggled: root.hasChanges = true
-        }
-    }
-    Mixxx.SettingParameter {
-        label: "Maximum retries"
-
-        Skin.TextField {
-            id: maximumRetriesField
-
-            validator: IntValidator {
-                bottom: 0
+                    onTextEdited: root.hasChanges = true
+                }
             }
-            width: 80
+            RowLayout {
+                Text {
+                    Layout.fillWidth: true
+                    color: Theme.white
+                    font.pixelSize: 14
+                    text: "Password"
 
-            onTextEdited: root.hasChanges = true
-        }
-    }
+                    Mixxx.SettingParameter {
+                        label: "Password"
+                    }
+                }
+                Skin.TextField {
+                    id: passwordField
 
-    RowLayout {
-        Layout.topMargin: 4
+                    echoMode: TextInput.Password
+                    width: 160
 
-        Skin.FormButton {
-            activeColor: "#999999"
-            backgroundColor: "#7D3B3B"
-            enabled: !root.committing
-            opacity: enabled ? 1.0 : 0.5
-            text: "Cancel"
-            visible: root.hasChanges
-
-            onPressed: {
-                root.load();
+                    onTextEdited: root.hasChanges = true
+                }
             }
-        }
-        Item {
-            Layout.fillWidth: true
-        }
-        Text {
-            id: errorMessage
+            RowLayout {
+                Text {
+                    Layout.fillWidth: true
+                    color: Theme.white
+                    font.pixelSize: 14
+                    text: "Format"
 
-            Layout.alignment: Qt.AlignVCenter
-            Layout.rightMargin: 16
-            color: "#7D3B3B"
-            text: ""
-        }
-        Skin.FormButton {
-            activeColor: "#999999"
-            backgroundColor: root.hasChanges ? "#3a60be" : Theme.darkGray3
-            enabled: root.hasChanges && !root.committing
-            opacity: enabled ? 1.0 : 0.5
-            text: "Save"
+                    Mixxx.SettingParameter {
+                        label: "Format"
+                    }
+                }
+                ColumnLayout {
+                    spacing: 2
 
-            onPressed: {
-                errorMessage.text = "";
-                root.save();
+                    Skin.ComboBox {
+                        id: formatField
+
+                        model: [
+                            {
+                                text: "MP3",
+                                value: "MP3"
+                            },
+                            {
+                                text: "Ogg Vorbis",
+                                value: "OGG"
+                            }
+                        ]
+                        textRole: "text"
+                        valueRole: "value"
+                        width: 140
+
+                        onActivated: root.hasChanges = true
+                    }
+                    Text {
+                        color: "#B4453F"
+                        font.pixelSize: 10
+                        text: "Ogg streams don't support live artist/title metadata to listeners"
+                        visible: formatField.currentValue === "OGG"
+                    }
+                }
+            }
+            RowLayout {
+                Text {
+                    Layout.fillWidth: true
+                    color: Theme.white
+                    font.pixelSize: 14
+                    text: "Bitrate (kbps)"
+
+                    Mixxx.SettingParameter {
+                        label: "Bitrate (kbps)"
+                    }
+                }
+                Skin.TextField {
+                    id: bitrateField
+
+                    validator: IntValidator {
+                        bottom: 8
+                        top: 320
+                    }
+                    width: 80
+
+                    onTextEdited: root.hasChanges = true
+                }
+            }
+            RowLayout {
+                Text {
+                    Layout.fillWidth: true
+                    color: Theme.white
+                    font.pixelSize: 14
+                    text: "Stream name"
+
+                    Mixxx.SettingParameter {
+                        label: "Stream name"
+                    }
+                }
+                Skin.TextField {
+                    id: streamNameField
+
+                    width: 220
+
+                    onTextEdited: root.hasChanges = true
+                }
+            }
+            RowLayout {
+                Text {
+                    Layout.fillWidth: true
+                    color: Theme.white
+                    font.pixelSize: 14
+                    text: "Stream description"
+
+                    Mixxx.SettingParameter {
+                        label: "Stream description"
+                    }
+                }
+                Skin.TextField {
+                    id: streamDescField
+
+                    width: 220
+
+                    onTextEdited: root.hasChanges = true
+                }
+            }
+            RowLayout {
+                Text {
+                    Layout.fillWidth: true
+                    color: Theme.white
+                    font.pixelSize: 14
+                    text: "Stream genre"
+
+                    Mixxx.SettingParameter {
+                        label: "Stream genre"
+                    }
+                }
+                Skin.TextField {
+                    id: streamGenreField
+
+                    width: 160
+
+                    onTextEdited: root.hasChanges = true
+                }
+            }
+            RowLayout {
+                Text {
+                    Layout.fillWidth: true
+                    color: Theme.white
+                    font.pixelSize: 14
+                    text: "List publicly"
+
+                    Mixxx.SettingParameter {
+                        label: "List publicly"
+                    }
+                }
+                CheckBox {
+                    id: streamPublicField
+
+                    onToggled: root.hasChanges = true
+                }
+            }
+            RowLayout {
+                Text {
+                    Layout.fillWidth: true
+                    color: Theme.white
+                    font.pixelSize: 14
+                    text: "Custom metadata format"
+
+                    Mixxx.SettingParameter {
+                        label: "Custom metadata format"
+                    }
+                }
+                Skin.TextField {
+                    id: metadataFormatField
+
+                    placeholderText: "%artist% - %title%"
+                    width: 220
+
+                    onTextEdited: root.hasChanges = true
+                }
+            }
+            RowLayout {
+                Text {
+                    Layout.fillWidth: true
+                    color: Theme.white
+                    font.pixelSize: 14
+                    text: "Custom artist override"
+
+                    Mixxx.SettingParameter {
+                        label: "Custom artist override"
+                    }
+                }
+                Skin.TextField {
+                    id: customArtistField
+
+                    width: 160
+
+                    onTextEdited: root.hasChanges = true
+                }
+            }
+            RowLayout {
+                Text {
+                    Layout.fillWidth: true
+                    color: Theme.white
+                    font.pixelSize: 14
+                    text: "Custom title override"
+
+                    Mixxx.SettingParameter {
+                        label: "Custom title override"
+                    }
+                }
+                Skin.TextField {
+                    id: customTitleField
+
+                    width: 160
+
+                    onTextEdited: root.hasChanges = true
+                }
+            }
+            RowLayout {
+                Text {
+                    Layout.fillWidth: true
+                    color: Theme.white
+                    font.pixelSize: 14
+                    text: "Enable metadata"
+
+                    Mixxx.SettingParameter {
+                        label: "Enable metadata"
+                    }
+                }
+                CheckBox {
+                    id: enableMetadataField
+
+                    onToggled: root.hasChanges = true
+                }
+            }
+            RowLayout {
+                Text {
+                    Layout.fillWidth: true
+                    color: Theme.white
+                    font.pixelSize: 14
+                    text: "Auto-reconnect"
+
+                    Mixxx.SettingParameter {
+                        label: "Auto-reconnect"
+                    }
+                }
+                CheckBox {
+                    id: enableReconnectField
+
+                    onToggled: root.hasChanges = true
+                }
+            }
+            RowLayout {
+                Text {
+                    Layout.fillWidth: true
+                    color: Theme.white
+                    font.pixelSize: 14
+                    text: "Reconnect period (s)"
+
+                    Mixxx.SettingParameter {
+                        label: "Reconnect period (s)"
+                    }
+                }
+                Skin.TextField {
+                    id: reconnectPeriodField
+
+                    validator: DoubleValidator {
+                        bottom: 0
+                    }
+                    width: 80
+
+                    onTextEdited: root.hasChanges = true
+                }
+            }
+            RowLayout {
+                Text {
+                    Layout.fillWidth: true
+                    color: Theme.white
+                    font.pixelSize: 14
+                    text: "Limit reconnect attempts"
+
+                    Mixxx.SettingParameter {
+                        label: "Limit reconnect attempts"
+                    }
+                }
+                CheckBox {
+                    id: limitReconnectsField
+
+                    onToggled: root.hasChanges = true
+                }
+            }
+            RowLayout {
+                Text {
+                    Layout.fillWidth: true
+                    color: Theme.white
+                    font.pixelSize: 14
+                    text: "Maximum retries"
+
+                    Mixxx.SettingParameter {
+                        label: "Maximum retries"
+                    }
+                }
+                Skin.TextField {
+                    id: maximumRetriesField
+
+                    validator: IntValidator {
+                        bottom: 0
+                    }
+                    width: 80
+
+                    onTextEdited: root.hasChanges = true
+                }
+            }
+
+            RowLayout {
+                Layout.fillWidth: true
+                Layout.topMargin: 4
+
+                Skin.FormButton {
+                    activeColor: "#999999"
+                    backgroundColor: "#7D3B3B"
+                    enabled: !root.committing
+                    opacity: enabled ? 1.0 : 0.5
+                    text: "Cancel"
+                    visible: root.hasChanges
+
+                    onPressed: {
+                        root.load();
+                    }
+                }
+                Item {
+                    Layout.fillWidth: true
+                }
+                Text {
+                    id: errorMessage
+
+                    Layout.alignment: Qt.AlignVCenter
+                    Layout.rightMargin: 16
+                    color: "#7D3B3B"
+                    text: ""
+                }
+                Skin.FormButton {
+                    activeColor: "#999999"
+                    backgroundColor: root.hasChanges ? "#3a60be" : Theme.darkGray3
+                    enabled: root.hasChanges && !root.committing
+                    opacity: enabled ? 1.0 : 0.5
+                    text: "Save"
+
+                    onPressed: {
+                        errorMessage.text = "";
+                        root.save();
+                    }
+                }
             }
         }
     }

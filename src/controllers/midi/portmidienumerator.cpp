@@ -3,6 +3,7 @@
 #include <portmidi.h>
 
 #include <QRegularExpression>
+#include <utility>
 
 #include "controllers/defs_controllers.h"
 #include "controllers/midi/portmidicontroller.h"
@@ -182,14 +183,36 @@ bool shouldLinkInputToOutput(const QString& input_name,
 QList<Controller*> PortMidiEnumerator::queryDevices() {
     qDebug() << "Scanning PortMIDI devices:";
 
-    int iNumDevices = Pm_CountDevices();
+    // retireDevice() (deferred deletion, see ControllerEnumerator) still
+    // CLOSES each controller synchronously right here, which matters for
+    // ordering: every PmStream must be closed before the Pm_Terminate()
+    // below tears down the device table those streams reference.
+    for (Controller* pDevice : std::as_const(m_devices)) {
+        retireDevice(pDevice);
+    }
+    m_devices.clear();
 
-    QListIterator<Controller*> dev_it(m_devices);
-    while (dev_it.hasNext()) {
-        delete dev_it.next();
+    // PortMidi builds its device table once, in Pm_Initialize(), and
+    // Pm_CountDevices()/Pm_GetDeviceInfo() just index into that static
+    // snapshot -- they never re-query CoreMIDI. Without cycling
+    // Pm_Terminate()/Pm_Initialize() here, a MIDI device unplugged after
+    // startup keeps reappearing in every queryDevices() call forever (its
+    // table entry never disappears), even though new devices get picked up
+    // fine (confirmed via manual testing with a real USB-MIDI controller).
+    // This is safe here specifically because all devices in m_devices were
+    // just deleted above, which (via ~PortMidiController) already closed
+    // any of their open PmStreams -- so no stream or PmDeviceInfo pointer
+    // from the old table is still in use when the table gets torn down.
+    PmError termErr = Pm_Terminate();
+    if (termErr != pmNoError) {
+        qWarning() << "PortMidi error:" << Pm_GetErrorText(termErr);
+    }
+    PmError initErr = Pm_Initialize();
+    if (initErr != pmNoError) {
+        qWarning() << "PortMidi error:" << Pm_GetErrorText(initErr);
     }
 
-    m_devices.clear();
+    int iNumDevices = Pm_CountDevices();
 
     const PmDeviceInfo* inputDeviceInfo = nullptr;
     const PmDeviceInfo* outputDeviceInfo = nullptr;

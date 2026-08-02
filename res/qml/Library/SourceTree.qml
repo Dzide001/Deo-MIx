@@ -91,6 +91,7 @@ Mixxx.LibrarySourceTree {
         Mixxx.TrackListColumn {
             columnIdx: Mixxx.TrackListColumn.SQLColumns.Title
             fillSpan: 3
+            hidden: Mixxx.LibraryColumnSettings.isColumnHidden(columnIdx, false)
             label: qsTr("Title")
 
             delegate: DefaultDelegate {
@@ -99,6 +100,7 @@ Mixxx.LibrarySourceTree {
         Mixxx.TrackListColumn {
             columnIdx: Mixxx.TrackListColumn.SQLColumns.Artist
             fillSpan: 2
+            hidden: Mixxx.LibraryColumnSettings.isColumnHidden(columnIdx, false)
             label: qsTr("Artist")
 
             delegate: DefaultDelegate {
@@ -108,6 +110,7 @@ Mixxx.LibrarySourceTree {
             autoHideWidth: 690
             columnIdx: Mixxx.TrackListColumn.SQLColumns.Album
             fillSpan: 1
+            hidden: Mixxx.LibraryColumnSettings.isColumnHidden(columnIdx, false)
             label: qsTr("Album")
 
             delegate: DefaultDelegate {
@@ -116,6 +119,7 @@ Mixxx.LibrarySourceTree {
         Mixxx.TrackListColumn {
             autoHideWidth: 750
             columnIdx: Mixxx.TrackListColumn.SQLColumns.Year
+            hidden: Mixxx.LibraryColumnSettings.isColumnHidden(columnIdx, false)
             label: qsTr("Year")
             preferredWidth: 80
 
@@ -124,6 +128,7 @@ Mixxx.LibrarySourceTree {
         },
         Mixxx.TrackListColumn {
             columnIdx: Mixxx.TrackListColumn.SQLColumns.Bpm
+            hidden: Mixxx.LibraryColumnSettings.isColumnHidden(columnIdx, false)
             label: qsTr("Bpm")
             preferredWidth: 60
 
@@ -132,6 +137,7 @@ Mixxx.LibrarySourceTree {
         },
         Mixxx.TrackListColumn {
             columnIdx: Mixxx.TrackListColumn.SQLColumns.Key
+            hidden: Mixxx.LibraryColumnSettings.isColumnHidden(columnIdx, false)
             label: qsTr("Key")
             preferredWidth: 70
 
@@ -141,6 +147,7 @@ Mixxx.LibrarySourceTree {
         Mixxx.TrackListColumn {
             autoHideWidth: 900
             columnIdx: Mixxx.TrackListColumn.SQLColumns.FileType
+            hidden: Mixxx.LibraryColumnSettings.isColumnHidden(columnIdx, false)
             label: qsTr("File Type")
             preferredWidth: 70
 
@@ -150,10 +157,80 @@ Mixxx.LibrarySourceTree {
         Mixxx.TrackListColumn {
             autoHideWidth: 1200
             columnIdx: Mixxx.TrackListColumn.SQLColumns.Bitrate
+            hidden: Mixxx.LibraryColumnSettings.isColumnHidden(columnIdx, false)
             label: qsTr("Bitrate")
             preferredWidth: 70
 
             delegate: DefaultDelegate {
+            }
+        },
+        // M7/column-visibility: 7 more real columns, hidden by default
+        // (matching the legacy skin's own curated hidden-by-default set
+        // in spirit -- see BaseTrackTableModel::isColumnHiddenByDefault())
+        // -- reachable via the header's right-click show/hide menu in
+        // TrackList.qml. The existing 8 columns above keep their current
+        // always-visible-by-default behavior unchanged.
+        Mixxx.TrackListColumn {
+            columnIdx: Mixxx.TrackListColumn.SQLColumns.Genre
+            hidden: Mixxx.LibraryColumnSettings.isColumnHidden(columnIdx, true)
+            label: qsTr("Genre")
+            preferredWidth: 90
+
+            delegate: DefaultDelegate {
+            }
+        },
+        Mixxx.TrackListColumn {
+            columnIdx: Mixxx.TrackListColumn.SQLColumns.Composer
+            hidden: Mixxx.LibraryColumnSettings.isColumnHidden(columnIdx, true)
+            label: qsTr("Composer")
+            preferredWidth: 100
+
+            delegate: DefaultDelegate {
+            }
+        },
+        Mixxx.TrackListColumn {
+            columnIdx: Mixxx.TrackListColumn.SQLColumns.Comment
+            hidden: Mixxx.LibraryColumnSettings.isColumnHidden(columnIdx, true)
+            label: qsTr("Comment")
+            preferredWidth: 150
+
+            delegate: DefaultDelegate {
+            }
+        },
+        Mixxx.TrackListColumn {
+            columnIdx: Mixxx.TrackListColumn.SQLColumns.Duration
+            hidden: Mixxx.LibraryColumnSettings.isColumnHidden(columnIdx, true)
+            label: qsTr("Duration")
+            preferredWidth: 60
+
+            delegate: DefaultDelegate {
+            }
+        },
+        Mixxx.TrackListColumn {
+            columnIdx: Mixxx.TrackListColumn.SQLColumns.DateAdded
+            hidden: Mixxx.LibraryColumnSettings.isColumnHidden(columnIdx, true)
+            label: qsTr("Date Added")
+            preferredWidth: 100
+
+            delegate: DefaultDelegate {
+            }
+        },
+        Mixxx.TrackListColumn {
+            columnIdx: Mixxx.TrackListColumn.SQLColumns.TimesPlayed
+            hidden: Mixxx.LibraryColumnSettings.isColumnHidden(columnIdx, true)
+            label: qsTr("Times Played")
+            preferredWidth: 60
+
+            delegate: DefaultDelegate {
+            }
+        },
+        Mixxx.TrackListColumn {
+            columnIdx: Mixxx.TrackListColumn.SQLColumns.Rating
+            hidden: Mixxx.LibraryColumnSettings.isColumnHidden(columnIdx, true)
+            label: qsTr("Rating")
+            preferredWidth: 80
+
+            delegate: RatingDelegate {
             }
         }
     ]
@@ -254,6 +331,59 @@ Mixxx.LibrarySourceTree {
             elide: Text.ElideRight
             font.pixelSize: 14
             text: display ?? ""
+            verticalAlignment: Text.AlignVCenter
+        }
+    }
+
+    // M7 Rating column: `display` here resolves to a StarRating C++ value
+    // (not a Q_GADGET, so QML can't read it directly or stringify it --
+    // DefaultDelegate's plain `text: display` would emit a QML warning and
+    // render nothing). Same drag/selection boilerplate as DefaultDelegate,
+    // reading the star count via QmlLibraryTrackListModel::ratingStarCount(row)
+    // instead and rendering it as text stars.
+    component RatingDelegate: LibraryComponent.Cell {
+        id: ratingCell
+
+        readonly property var caps: capabilities
+        readonly property int starCount: (tableView && tableView.model) ? tableView.model.ratingStarCount(row) : 0
+
+        // FIXME: https://bugreports.qt.io/browse/QTBUG-111789
+        Binding on Drag.active {
+            delayed: true
+            value: ratingDragArea.drag.active
+        }
+
+        LibraryComponent.Track {
+            id: ratingDragArea
+
+            anchors.fill: parent
+            capabilities: ratingCell.caps
+
+            drag.onGrabChanged: (transition, eventPoint) => {
+                if (transition != PointerDevice.GrabPassive && transition != PointerDevice.GrabExclusive) {
+                    return;
+                }
+                parent.dragImage.grabToImage(result => {
+                    parent.Drag.imageSource = result.url;
+                }, Qt.size(parent.dragImage.width, parent.dragImage.height));
+            }
+            tap.onDoubleTapped: {
+                tableView.selectionModel.selectRow(row);
+                tableView.loadSelectedTrackIntoNextAvailableDeck(false);
+            }
+            tap.onTapped: (eventPoint, button) => {
+                if (button == Qt.LeftButton) {
+                    tableView.selectionModel.selectRow(row);
+                }
+            }
+        }
+        Text {
+            anchors.fill: parent
+            anchors.leftMargin: 15
+            color: Theme.textColor
+            elide: Text.ElideRight
+            font.pixelSize: 14
+            text: ratingCell.starCount > 0 ? "★".repeat(ratingCell.starCount) + "☆".repeat(5 - ratingCell.starCount) : ""
             verticalAlignment: Text.AlignVCenter
         }
     }

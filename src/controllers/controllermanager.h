@@ -16,6 +16,7 @@ class ControllerLearningEventFilter;
 class MappingInfoEnumerator;
 class LegacyControllerMapping;
 class ControllerEnumerator;
+class ControllerHotplugMonitor;
 
 /// Function to sort controllers by name
 bool controllerCompare(Controller *a, Controller *b);
@@ -105,6 +106,13 @@ class ControllerManager : public QObject {
     /// The single shared background thread that drives the entire ControllerManager,
     /// all ControllerEnumerators, and all Controller instances.
     std::unique_ptr<QThread> m_pThread;
+    /// Watches for macOS-level MIDI/HID plug/unplug events and triggers an
+    /// automatic rescan; see controllerhotplugmonitor.h. No-op on other
+    /// platforms. Constructed and started at the end of slotSetUpDevices()
+    /// (deliberately not slotInitialize() -- see that function's own
+    /// comment for the startup race this avoids), stopped at the top of
+    /// slotShutdown() (both on the ControllerManager thread).
+    std::unique_ptr<ControllerHotplugMonitor> m_pHotplugMonitor;
     /// Written once on the ControllerManager thread during slotInitialize(),
     /// before initialized() is emitted. Afterwards only read from the main thread
     QSharedPointer<MappingInfoEnumerator> m_pMainThreadUserMappingEnumerator;

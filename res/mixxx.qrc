@@ -105,5 +105,7 @@
         <file>qml/Deo/DeckDesignMockup.qml</file>
         <file>../images/gear-man-setting-svgrepo-com.svg</file>
         <file>../images/gear-svgrepo-com.svg</file>
+        <file>qml/Deo/DeckTimeKeyMockup.qml</file>
+        <file>../images/lock-open.svg</file>
     </qresource>
 </RCC>

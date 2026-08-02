@@ -174,13 +174,45 @@ Item {
                     onClicked: Mixxx.VideoEngine.setCameraSource("[Channel2]", checked)
                 }
             }
+            // M12 Stage 6: NDI output is a plain method call
+            // (enableNdiOutput()), same reasoning as camera above -- not a
+            // real ControlObject. ndiOutputAvailable is a compile-time
+            // constant (was this build actually compiled with
+            // -DVIDEO_ENGINE_NDI_OUTPUT=ON), so this whole row is simply
+            // absent rather than shown-but-disabled when the build doesn't
+            // support it -- there's nothing a user could do about a
+            // missing SDK from inside the running app.
+            Row {
+                anchors.horizontalCenter: parent.horizontalCenter
+                spacing: 8
+                visible: Mixxx.VideoEngine.available && Mixxx.VideoEngine.ndiOutputAvailable
+
+                Skin.Button {
+                    id: ndiOutputToggle
+
+                    width: 56
+                    height: 26
+                    checkable: true
+                    text: "NDI"
+
+                    onClicked: Mixxx.VideoEngine.enableNdiOutput(checked, ndiSourceNameField.text)
+                }
+                Skin.TextField {
+                    id: ndiSourceNameField
+
+                    width: 140
+                    height: 26
+                    text: "Deo Pro DJ"
+                    placeholderText: "NDI source name"
+                }
+            }
             Label {
                 anchors.horizontalCenter: parent.horizontalCenter
                 color: Theme.deckTextSecondary
                 font.family: Theme.fontFamily
                 font.italic: true
                 font.pixelSize: 10
-                text: "Free layer position/opacity/z-order and true independent\nper-deck pause are still in progress"
+                text: "Free layer position/opacity/z-order are still in progress"
                 horizontalAlignment: Text.AlignHCenter
                 visible: Mixxx.VideoEngine.available
             }

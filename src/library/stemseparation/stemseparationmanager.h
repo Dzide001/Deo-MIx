@@ -58,6 +58,15 @@ class StemSeparationManager : public QObject {
     /// PlayerManager are torn down.
     void cancelAndWait();
 
+    /// Configured Demucs ONNX model path, empty if unset. Same
+    /// [AiStemSeparation]/ModelPath config value the legacy
+    /// DlgPrefAiStemSeparation page edits -- exposed here so the QML
+    /// settings page can edit it too without duplicating the key.
+    QString modelPath() const {
+        return resolveModelPath();
+    }
+    void setModelPath(const QString& path);
+
   signals:
     void progressChanged(float fraction, const QString& message);
     void finished(TrackPointer pNewStemTrack);

@@ -59,11 +59,17 @@ AudioUnit _Nullable AudioUnitManager::getAudioUnit() const {
 }
 
 bool AudioUnitManager::waitForAudioUnit(int timeoutMs) const {
-    bool success =
-            dispatch_group_wait(m_instantiationGroup,
-                    dispatch_time(DISPATCH_TIME_NOW, timeoutMs * 1000000)) == 0;
-    DEBUG_ASSERT(!success || m_isInstantiated.load());
-    return success;
+    // A true return only means the async completion block in
+    // instantiateAudioUnitAsync() ran to completion within timeoutMs --
+    // NOT that instantiation itself succeeded. That block calls
+    // dispatch_group_leave() on its error path too (logging a warning and
+    // returning before ever touching m_isInstantiated), which is a normal,
+    // common outcome (a real OSStatus error from AudioComponentInstantiate),
+    // not a bug -- so `success && !m_isInstantiated` is an expected state
+    // here, not one worth asserting against. Callers already handle it via
+    // getAudioUnit() returning nil.
+    return dispatch_group_wait(m_instantiationGroup,
+                   dispatch_time(DISPATCH_TIME_NOW, timeoutMs * 1000000)) == 0;
 }
 
 void AudioUnitManager::instantiateAudioUnitAsync(

@@ -30,7 +30,7 @@
     <string>Copyright © 2001-@MIXXX_YEAR@ Mixxx Development Team</string>
 
     <key>NSMicrophoneUsageDescription</key>
-    <string>Mixxx requires microphone access for microphone and vinyl input.</string>
+    <string>Deo DJ requires microphone access for microphone and vinyl input.</string>
 
     <!-- M12 Stage 3y: avfvideosrc (VideoEngineManager's camera input
          branch) is a separate macOS TCC permission category from
@@ -41,7 +41,7 @@
          no app identity for TCC to grant/deny access to in the first
          place). -->
     <key>NSCameraUsageDescription</key>
-    <string>Mixxx requires camera access for live camera video input.</string>
+    <string>Deo DJ requires camera access for live camera video input.</string>
 
     <key>NSPrincipalClass</key>
     <string>NSApplication</string>

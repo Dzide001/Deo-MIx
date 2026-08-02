@@ -1,5 +1,7 @@
 #include "qml/qmlstemseparationproxy.h"
 
+#include <QFileInfo>
+
 #include <utility>
 
 #include "library/stemseparation/stemseparationmanager.h"
@@ -37,6 +39,33 @@ QmlStemSeparationProxy::QmlStemSeparationProxy(
 QmlStemSeparationProxy* QmlStemSeparationProxy::create(
         QQmlEngine* pQmlEngine, [[maybe_unused]] QJSEngine* pJsEngine) {
     return new QmlStemSeparationProxy(s_pStemSeparationManager, pQmlEngine);
+}
+
+QString QmlStemSeparationProxy::modelPath() const {
+    if (!m_pManager) {
+        return QString();
+    }
+    return m_pManager->modelPath();
+}
+
+void QmlStemSeparationProxy::setModelPath(const QString& path) {
+    if (!m_pManager || m_pManager->modelPath() == path) {
+        return;
+    }
+    m_pManager->setModelPath(path);
+    emit modelPathChanged();
+}
+
+void QmlStemSeparationProxy::setModelPathFromUrl(const QUrl& url) {
+    setModelPath(url.toLocalFile());
+}
+
+QString QmlStemSeparationProxy::modelStatus() const {
+    const QString path = modelPath();
+    if (path.isEmpty()) {
+        return tr("Not set");
+    }
+    return QFileInfo::exists(path) ? tr("Found") : tr("File missing!");
 }
 
 bool QmlStemSeparationProxy::prepareStems(

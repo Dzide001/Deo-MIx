@@ -10,6 +10,8 @@
 #include <QJniObject>
 #else
 #include <hidapi.h>
+
+#include <utility>
 #endif
 
 #include "controllers/hid/hidcontroller.h"
@@ -127,6 +129,17 @@ HidEnumerator::~HidEnumerator() {
 
 QList<Controller*> HidEnumerator::queryDevices() {
     qInfo() << "Scanning USB HID devices";
+
+    // Without this, every re-enumeration APPENDS a fresh HidController for
+    // each still-connected device on top of the previous call's objects,
+    // duplicating the whole list on every rescan (pre-existing bug, only
+    // exposed once automatic hotplug rescans made repeated queryDevices()
+    // calls routine). retireDevice() closes now, deletes deferred -- see
+    // ControllerEnumerator.
+    for (Controller* pDevice : std::as_const(m_devices)) {
+        retireDevice(pDevice);
+    }
+    m_devices.clear();
 
 #ifdef __ANDROID__
     QJniObject context = QNativeInterface::QAndroidApplication::context();

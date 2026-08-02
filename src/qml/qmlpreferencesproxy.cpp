@@ -338,6 +338,9 @@ QmlControllerDeviceProxy::QmlControllerDeviceProxy(Controller* pInternal,
 }
 
 QmlControllerDeviceProxy::Type QmlControllerDeviceProxy::getType() const {
+    if (!m_pInternal) {
+        return Type::MIDI;
+    }
     return static_cast<QmlControllerDeviceProxy::Type>(
             m_pInternal->getDataRepresentationProtocol());
 }
@@ -347,6 +350,9 @@ QString QmlControllerDeviceProxy::getName() const {
     }
     if (m_productInfo.has_value() && !m_productInfo.value().friendlyName.trimmed().isEmpty()) {
         return m_productInfo.value().friendlyName;
+    }
+    if (!m_pInternal) {
+        return {};
     }
     return m_pInternal->getName();
 }
@@ -373,7 +379,7 @@ void QmlControllerDeviceProxy::setVisualUrl(const QUrl& url) {
     emit visualUrlChanged();
 }
 bool QmlControllerDeviceProxy::getEnabled() const {
-    return m_enabled.value_or(m_pInternal->isOpen());
+    return m_enabled.value_or(m_pInternal ? m_pInternal->isOpen() : false);
 }
 void QmlControllerDeviceProxy::setEnabled(bool state) {
     if (getEnabled() == state) {
@@ -395,6 +401,9 @@ void QmlControllerDeviceProxy::setMapping(QmlControllerMappingProxy* pMapping) {
     setEdited();
 }
 QString QmlControllerDeviceProxy::vendor() const {
+    if (!m_pInternal) {
+        return tr("N/A");
+    }
     auto vendorId = m_pInternal->getVendorId();
     if (!vendorId) {
         return tr("N/A");
@@ -405,6 +414,9 @@ QString QmlControllerDeviceProxy::vendor() const {
                     QString::number(id, 16).leftJustified(4, '0').toUpper());
 }
 QString QmlControllerDeviceProxy::product() const {
+    if (!m_pInternal) {
+        return tr("N/A");
+    }
     auto productId = m_pInternal->getProductId();
     if (!productId) {
         return tr("N/A");
@@ -415,6 +427,9 @@ QString QmlControllerDeviceProxy::product() const {
                     QString::number(id, 16).leftJustified(4, '0').toUpper());
 }
 QString QmlControllerDeviceProxy::serialNumber() const {
+    if (!m_pInternal) {
+        return tr("N/A");
+    }
     auto sn = m_pInternal->getSerialNumber().trimmed();
     if (!sn.isEmpty()) {
         return sn;
@@ -429,7 +444,8 @@ void QmlControllerDeviceProxy::clear() {
     m_editedVisualUrl.clear();
     emit visualUrlChanged();
 
-    std::shared_ptr<LegacyControllerMapping> pSelectedMapping = m_pInternal->getMapping();
+    std::shared_ptr<LegacyControllerMapping> pSelectedMapping =
+            m_pInternal ? m_pInternal->getMapping() : nullptr;
     for (const auto& pMapping : std::as_const(m_mappings)) {
         if (pSelectedMapping && pSelectedMapping->filePath() == pMapping->definition().getPath()) {
             m_pMapping = pMapping;
@@ -449,6 +465,11 @@ void QmlControllerDeviceProxy::clear() {
 bool QmlControllerDeviceProxy::save(const QmlConfigProxy* pConfig) {
     if (!m_edited) {
         return true;
+    }
+    VERIFY_OR_DEBUG_ASSERT(m_pInternal) {
+        // The wrapped Controller was destroyed by a rescan (device
+        // unplugged); nothing sensible to save against anymore.
+        return false;
     }
 
     std::shared_ptr<LegacyControllerMapping> mapping;
@@ -486,7 +507,7 @@ bool QmlControllerDeviceProxy::save(const QmlConfigProxy* pConfig) {
 
             switch (m_pInternal->getDataRepresentationProtocol()) {
             case DataRepresentationProtocol::MIDI: {
-                auto* pMidiController = dynamic_cast<MidiController*>(m_pInternal);
+                auto* pMidiController = dynamic_cast<MidiController*>(m_pInternal.data());
                 VERIFY_OR_DEBUG_ASSERT(pMidiController) {
                     return false;
                 }
@@ -495,7 +516,7 @@ bool QmlControllerDeviceProxy::save(const QmlConfigProxy* pConfig) {
             }
 #ifdef __HID__
             case DataRepresentationProtocol::HID: {
-                auto* pHidController = dynamic_cast<HidController*>(m_pInternal);
+                auto* pHidController = dynamic_cast<HidController*>(m_pInternal.data());
                 VERIFY_OR_DEBUG_ASSERT(pHidController) {
                     return false;
                 }
@@ -509,7 +530,7 @@ bool QmlControllerDeviceProxy::save(const QmlConfigProxy* pConfig) {
 #endif
 #ifdef __BULK__
             case DataRepresentationProtocol::USB_BULK_TRANSFER: {
-                auto* pBulkController = dynamic_cast<BulkController*>(m_pInternal);
+                auto* pBulkController = dynamic_cast<BulkController*>(m_pInternal.data());
                 VERIFY_OR_DEBUG_ASSERT(pBulkController) {
                     return false;
                 }
@@ -674,6 +695,35 @@ void QmlControllerManagerProxy::refreshMappings() {
 }
 void QmlControllerManagerProxy::refreshKnownDevices() {
     const auto controllers = m_pControllerManager->getControllers();
+
+    // Reconcile before adding: every rescan (manual Rescan button or the
+    // macOS hotplug monitor) REPLACES all Controller instances -- even
+    // still-connected hardware comes back as a brand-new object -- so any
+    // proxy whose wrapped Controller* is no longer in the manager's list
+    // is stale. Without this pruning, stale proxies (a) keep dangling
+    // Controller pointers that QML re-reads on the next delegate rebuild
+    // (a real EXC_BAD_ACCESS crash root-caused via lldb during hotplug
+    // testing), and (b) pile up as duplicate list entries for the same
+    // physical device on every rescan.
+    auto pruneStale = [&](QList<QmlControllerDeviceProxy*>* pList) {
+        bool changed = false;
+        for (auto it = pList->begin(); it != pList->end();) {
+            if (!controllers.contains((*it)->internal())) {
+                (*it)->deleteLater();
+                it = pList->erase(it);
+                changed = true;
+            } else {
+                ++it;
+            }
+        }
+        return changed;
+    };
+    pruneStale(&m_knownDevicesFound);
+    pruneStale(&m_unknownDevicesFound);
+    m_knownControllers.removeIf([&](Controller* pController) {
+        return !controllers.contains(pController);
+    });
+
     for (auto* pController : std::as_const(controllers)) {
         if (m_knownControllers.contains(pController)) {
             continue;

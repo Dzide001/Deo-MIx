@@ -85,6 +85,11 @@ class QmlLibraryTrackListModel : public QIdentityProxyModel {
     // and re-reading tags from the file on disk.
     Q_INVOKABLE void hideTrack(int row);
     Q_INVOKABLE void reloadTrackMetadata(int row);
+    // M7 Rating column: Qt::DisplayRole for this column resolves to a
+    // StarRating value (see BaseTrackTableModel::roleValue), a plain C++
+    // class (not a Q_GADGET) that QML can't introspect. This surfaces the
+    // plain star count instead so a QML delegate can render it as text.
+    Q_INVOKABLE int ratingStarCount(int row) const;
 
   private:
     std::vector<parented_ptr<QmlLibraryTrackListColumn>> m_columns;
