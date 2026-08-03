@@ -56,7 +56,8 @@ CmdlineArgs::CmdlineArgs()
           m_controllerAbortOnWarning(false),
           m_developer(false),
 #ifdef MIXXX_USE_QML
-          m_qml(false),
+          // Default ON for this fork -- see the parse block below.
+          m_qml(true),
 #endif
           m_safeMode(false),
           m_useLegacyVuMeter(false),
@@ -293,6 +294,18 @@ bool CmdlineArgs::parse(const QStringList& arguments, CmdlineArgs::ParseMode mod
                               "with the current one. We highly recommend "
                               "backing up your data if you do so.")
                     : QString());
+    // Opt-out counterpart to the QML default set below -- kept available
+    // because the legacy widget skin is still fully functional and is
+    // the only place a few features live (e.g. the controller MIDI/HID
+    // Learning Wizard, which has no QML equivalent).
+    const QCommandLineOption legacyUi(QStringLiteral("legacy-ui"),
+            forUserFeedback ? QCoreApplication::translate("CmdlineArgs",
+                                      "Loads the legacy Qt Widgets interface "
+                                      "instead of this build's default QML "
+                                      "interface.")
+                            : QString());
+    parser.addOption(legacyUi);
+
     QCommandLineOption qmlDeprecated(
             QStringLiteral("qml"));
     qmlDeprecated.setFlags(QCommandLineOption::HiddenFromHelp);
@@ -479,11 +492,19 @@ bool CmdlineArgs::parse(const QStringList& arguments, CmdlineArgs::ParseMode mod
     m_controllerAbortOnWarning = parser.isSet(controllerAbortOnWarning);
     m_developer = parser.isSet(developer);
 #ifdef MIXXX_USE_QML
-    m_qml = parser.isSet(qml);
+    // This fork's whole product IS the QML skin (res/qml/Deo), so it is
+    // the DEFAULT here rather than an opt-in behind --new-ui. Upstream
+    // has this the other way round because its QML UI is experimental
+    // and its shipped skin is the legacy widget one -- with that
+    // default, double-clicking the packaged app launched straight into
+    // stock Mixxx, which is not this app at all. --legacy-ui opts back
+    // out; --new-ui is still accepted so existing shortcuts/scripts and
+    // every launch command in the decision log keep working.
+    m_qml = !parser.isSet(legacyUi);
     if (parser.isSet(qmlDeprecated)) {
-        m_qml |= true;
         qWarning() << "The argument '--qml' is deprecated and will be soon "
-                      "removed. Please use '--new-ui' instead!";
+                      "removed. It is also no longer needed: the QML "
+                      "interface is this build's default.";
     }
     m_awareOfRisk = parser.isSet(awareOfRisk);
 #endif
