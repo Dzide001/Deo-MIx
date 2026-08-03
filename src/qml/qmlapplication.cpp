@@ -86,19 +86,28 @@ QmlApplication::QmlApplication(
     // The risk check guards against Mixxx 3.0 potentially running different
     // database upgrade paths that could corrupt 2.x profiles.
     //
-    // When a QML skin is auto-detected from preferences (--developer, no
-    // --new-ui), the underlying binary and DB schema are identical to a
-    // normal 2.x launch — there is no data corruption risk. Skip the gate.
+    // It does not apply to this fork, and is disabled here. The reasoning
+    // was already established for the auto-detected-skin case below and
+    // holds for every launch: this build is a 2.7 codebase, the QML skin
+    // is just a different front-end on top of the very same binary and
+    // the very same DB schema a legacy-skin launch uses. There is no 3.0
+    // upgrade path to be guarded against, so there is nothing to corrupt.
     //
-    // When explicitly launched with --new-ui, the full 3.0 application path
-    // is taken and the gate remains in effect as designed.
-    const bool viaNewUiFlag = CmdlineArgs::Instance().isQml();
+    // Leaving it enabled actively broke the app: once the QML skin became
+    // the default (so that double-clicking launches this fork's own
+    // interface rather than stock Mixxx), isQml() is true on every launch,
+    // so every ordinary launch against the user's real profile hit the
+    // modal "serious risks of data loss" dialog and then exit(-1).
+    // --allow-dangerous-data-corruption-risk still works and is still
+    // honoured below; it is simply no longer required for normal use.
+    constexpr bool kRiskGateAppliesToThisFork = false;
 
     if (configVersion == VersionStore::FUTURE_UNSTABLE) {
         qDebug() << "Generating a new user profile for safe testing with unstable code";
-    } else if (!viaNewUiFlag) {
-        qDebug() << "QmlApplication: QML skin loaded via preferences, "
-                    "skipping data-corruption risk check (2.x profile is safe)";
+    } else if (!kRiskGateAppliesToThisFork) {
+        qDebug() << "QmlApplication: skipping the Mixxx-3.0 data-corruption "
+                    "risk check -- this fork runs the QML skin on the same "
+                    "2.x binary and DB schema, so the profile is safe";
     } else if (CmdlineArgs::Instance().isAwareOfRisk()) {
         qCritical() << "Existing user profile detected from" << configVersion
                     << "but you said you wanted to play with fire!";
