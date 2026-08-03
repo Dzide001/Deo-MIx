@@ -2523,9 +2523,15 @@ if(APPLE)
         XCODE_ATTRIBUTE_ASSETCATALOG_COMPILER_APPICON_NAME "AppIcon"
     )
   elseif(MACOS_BUNDLE)
+    # Contents/Resources directly, NOT MIXXX_INSTALL_DATADIR: that now
+    # points at the Contents/Resources/mixxx subdirectory (see its own
+    # comment above for why), but CFBundleIconFile is resolved by macOS
+    # relative to Contents/Resources itself, so an icon installed into the
+    # subdirectory is simply never found and the app shows the generic
+    # blank document icon in Finder and the Dock.
     install(
       FILES "${CMAKE_CURRENT_SOURCE_DIR}/res/osx/application.icns"
-      DESTINATION ${MIXXX_INSTALL_DATADIR}
+      DESTINATION "${MIXXX_INSTALL_PREFIX}/Contents/Resources"
     )
 
     set(MACOS_BUNDLE_VERSION "${CMAKE_PROJECT_VERSION}")
